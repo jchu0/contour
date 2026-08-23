@@ -10,7 +10,8 @@ put the checks that could not run at the top of the page instead of the bottom.
 
 from __future__ import annotations
 
-from datetime import date
+import json
+from datetime import date, datetime as _dt
 import os
 import threading
 import time
@@ -639,13 +640,51 @@ margin-right:auto}
 .tour-skip,.tour-next{font-family:var(--mono);font-size:.75rem;padding:.35rem .7rem;
 border:1px solid var(--rule);background:none;color:var(--ink-2);cursor:pointer}
 .tour-next{background:var(--accent);border-color:var(--accent);color:var(--paper)}
-.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));
-gap:1px;background:var(--rule);border:1px solid var(--rule)}
-.setting{background:var(--surface);padding:1rem 1.15rem;display:flex;
-flex-direction:column;gap:.3rem}
-.setting span{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+.bar-button.rail{padding:0 .45rem}
+.bar-button.rail svg{fill:none;stroke:currentColor}
+.bar-button.rail rect{stroke-width:1.5}
+.account-card{display:flex;align-items:center;gap:1rem;padding:1.15rem 1.25rem;
+background:var(--surface);border:1px solid var(--rule)}
+.avatar.big{width:3rem;height:3rem;font-size:.9375rem}
+.account-card-text{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.account-card-text b{font-family:var(--sans);font-size:1.0625rem;font-weight:600}
+.account-card-text span{font-family:var(--mono);font-size:.8125rem;color:var(--ink-3)}
+.account-card-tag{margin-left:auto;font-family:var(--mono);font-size:.6875rem;
+letter-spacing:.08em;text-transform:uppercase;padding:.25rem .55rem;
+background:var(--surface-2);color:var(--ink-3)}
+.set-group{display:flex;flex-direction:column}
+.set-group h2{font-family:var(--sans);font-size:1.0625rem;font-weight:600;
+letter-spacing:-.01em;margin:0 0 .6rem;padding-bottom:.5rem;
+border-bottom:1px solid var(--rule-strong)}
+.set-row{display:grid;grid-template-columns:minmax(0,15rem) minmax(0,1fr);gap:1.5rem;
+padding:.85rem .25rem;border-bottom:1px solid var(--rule);align-items:center}
+.set-row:last-child{border-bottom:0}
+.set-label{display:flex;flex-direction:column;gap:.15rem}
+.set-label b{font-family:var(--sans);font-size:.9375rem;font-weight:600}
+.set-label small{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+line-height:1.4}
+.set-value{font-family:var(--mono);font-size:.875rem;min-width:0;word-break:break-word}
+.set-value code{font-family:var(--mono);font-size:.8125rem;color:var(--ink-2)}
+.set-value.muted{color:var(--ink-3)}
+.set-value.bad{color:var(--high)}
+.set-value .unset{color:var(--ink-3)}
+.theme-options{display:flex;gap:.4rem}
+.theme-option{font-family:var(--mono);font-size:.78125rem;padding:.4rem .8rem;
+background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);cursor:pointer}
+.theme-option:hover{border-color:var(--accent);color:var(--accent)}
+.theme-option.on{border-color:var(--accent);background:var(--accent-soft);
+color:var(--accent);font-weight:600}
+.help-tabs{display:flex;gap:.35rem;margin-bottom:.75rem}
+.help-tab{font-family:var(--mono);font-size:.71875rem;padding:.3rem .6rem;
+background:none;color:var(--ink-3);border:1px solid var(--rule);cursor:pointer}
+.help-tab.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.help-body[data-help-pane="feedback"]{display:flex;flex-direction:column;gap:.4rem}
+.help-body label{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
 text-transform:uppercase;color:var(--ink-3)}
-.setting b{font-family:var(--mono);font-size:.875rem;font-weight:500;word-break:break-all}
+.help-body select,.help-body textarea{font-family:var(--mono);font-size:.8125rem;
+padding:.5rem .6rem;background:var(--paper);color:var(--ink);
+border:1px solid var(--rule-strong);width:100%;resize:vertical}
+.help-body button[type=submit]{align-self:flex-start;margin-top:.3rem}
 
 .pg-arrows{display:flex;gap:.4rem}
 .pg-arrow{display:grid;place-items:center;width:2.125rem;height:2.125rem;
@@ -816,19 +855,11 @@ def _sidebar(current: str = "") -> str:
         blocks.append(f'<div class="nav-group"><span class="nav-group-label">{esc(label)}</span>'
                       f'{"".join(items)}</div>')
 
-    toggle = (f'<button class="nav-toggle" type="button" data-nav-toggle '
-              f'aria-label="Collapse or expand the sidebar">'
-              f'<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-collapse">'
-              f'<path d="{CHEVRON_L}"/></svg>'
-              f'<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-expand">'
-              f'<path d="{CHEVRON_R}"/></svg>'
-              f'<span class="nav-label">Collapse</span></button>')
-
-    # The toggle sits with the brand rather than at the foot: it acts on the
-    # rail, and the reader looks for it where the rail begins.
-    return (f'<aside class="sidebar"><div class="brand-row">'
+    # The toggle lives in the top bar, not in the rail. Inside the rail it had
+    # nowhere to go when the rail narrowed, and ended up on the brand mark.
+    return (f'<aside class="sidebar">'
             f'<a class="brand" href="/"><span class="brand-mark">CT</span>'
-            f'<span class="brand-name nav-label">Contour</span></a>{toggle}</div>'
+            f'<span class="brand-name nav-label">Contour</span></a>'
             f'<nav class="nav-list">{"".join(blocks)}</nav>'
             f'<div class="sidebar-foot">{_account()}</div></aside>')
 
@@ -855,52 +886,126 @@ def _account() -> str:
 # box, so a page that renders an empty state does not tour its missing parts.
 TOURS: dict[str, list[tuple[str, str, str]]] = {
     "/": [
-        (".factbar", "The ledger so far",
-         "Every figure Contour has read from a filing, and how many companies "
-         "and periods they cover."),
-        (".nav-list", "Two kinds of page",
-         "Analyse reads companies. Manage decides what gets read and from where."),
+        (".sidebar", "The two halves of the app",
+         "Analyse reads companies. Manage decides which companies get read and "
+         "from which sources."),
+        (".facts", "The ledger so far",
+         "Every figure Contour has read from a filing, with the companies and "
+         "reporting periods they cover. These are counts of stored facts, not "
+         "estimates."),
+        (".ov-main .panel", "Recent activity",
+         "What has been scanned lately and what moved. A company with a "
+         "baseline shows its delta; one without shows a first reading."),
+        (".ov-side", "Your watchlist at a glance",
+         "Tracked companies and where each one stands, one click from here."),
+        ("form.scan", "Start a scan",
+         "Any registered ticker, straight from here."),
     ],
     "/scan": [
         ("form.scan", "One company",
-         "Any of the ~10,400 SEC-registered tickers. Every figure on the report "
-         "is computed from a filing fetched now and cites the accession."),
+         "Any of the ~10,400 SEC-registered tickers. Every figure on the "
+         "report is computed from a filing fetched now and cites the accession "
+         "it came from."),
         (".wl", "Your watchlist",
-         "Companies with a baseline. Scanning one of these diffs against it; "
-         "scanning anything else is a first reading with nothing to compare."),
+         "Companies that have a baseline. Scanning one of these diffs against "
+         "it; scanning anything else is a first reading with nothing to "
+         "compare against."),
+        (".wl td.go", "Scan without typing",
+         "Each row scans directly, so the box is for companies you do not "
+         "already track."),
+        (".chips", "Scanned but not tracked",
+         "Recent one-off scans. They have no baseline, so they show findings "
+         "but no delta until you add them."),
+        ("footer", "What the ledger holds",
+         "Totals across every company, refreshed on each page load."),
     ],
     "/compare": [
-        (".picker", "Two sides",
-         "Pick a company on each side. Whichever you pick is disabled on the "
+        (".side-head", "Two sides",
+         "Each side picks one company. Whichever you pick is disabled on the "
          "other — a company compared with itself is a comparison of nothing."),
+        (".pick-filter", "Finding one",
+         "Filter by ticker or company name. A long watchlist scrolls inside "
+         "the list rather than pushing the rest of the page down."),
+        (".pick-alt", "Something you do not track",
+         "You can type an untracked ticker, but it has no baseline, so that "
+         "side is a cold reading."),
         (".commit", "What you will get",
-         "One row per check, over the union of both rosters, so a check that "
+         "One row per check over the union of both rosters, so a check that "
          "ran on one side and not the other reads across in a glance."),
     ],
     "/tracked": [
         (".maptable", "What has accumulated",
-         "When each baseline was taken, and what the ledger has picked up since."),
+         "When each baseline was taken, how many scans have run, and how many "
+         "figures the ledger has picked up since."),
+        (".maptable th:nth-child(8)", "Since the last scan",
+         "Whether anything moved. No change is a finding in its own right and "
+         "is never dressed up as one."),
         ("form.cadence", "How often to revisit",
          "The background pass skips companies that are not due. Manual only "
          "keeps the baseline without ever revisiting it on a timer."),
+        (".rescan", "Rescan now",
+         "A deliberate act, so it ignores cadence and rescans everything."),
+        ("footer", "Ledger totals",
+         "What the whole ledger holds, across tracked and untracked scans."),
     ],
     "/sources": [
         (".health", "What can actually run",
          "Live, blocked and off are different states. A source switched off is "
-         "a choice; one missing its key is a gap."),
-        (".src-tools", "Finding one",
-         "Filter by name, host or file, or narrow to a state or a class."),
+         "a choice; one missing its key is a gap Contour will hit."),
+        (".src-tools", "Finding a source",
+         "Filter by name, host or file, or narrow to a state or a reliability "
+         "class."),
+        (".src-row .src-klass", "Reliability class",
+         "Only a Class-A primary source can mark a finding verified. "
+         "Everything else corroborates and never promotes a claim on its own."),
+        (".src-row .src-keyed", "How it finds a company",
+         "CIK is exact and applies to every filer. NAME needs a per-company "
+         "mapping, and reports not applicable without one."),
         ("#mappings", "Names, typed by hand",
-         "Sources not keyed on CIK need to be told how a company is named in "
-         "them. A company with no line here reports as not applicable."),
+         "Sources not keyed on CIK must be told how a company is named in "
+         "them. A name search returns the wrong company often enough that one "
+         "false positive is worse than no record."),
+        ("#shortcuts", "Scan shortcuts",
+         "One-click buttons on the scan page. Any registered ticker can still "
+         "be typed without appearing here."),
+        ("#declare", "Add your own",
+         "A name, a URL template, a class, and where each field sits in the "
+         "response. It is written to plain TOML you can edit by hand."),
     ],
     "/add": [
+        ("form.scan, form", "Start with a ticker",
+         "Resolved against SEC's own register before anything else happens, "
+         "so a company that does not exist fails here rather than halfway "
+         "through a scan."),
+    ],
+    "/add/review": [
+        (".found", "The filer",
+         "Resolved against SEC's own register, so a ticker cannot point at "
+         "nothing."),
+        (".count-line", "How the roster was built",
+         "Code decides what can run — sector and whether the company reports "
+         "the concept. A model only ranks what survives that."),
         (".picks", "The roster is yours",
-         "Contour filters to what can run, then ranks. Nothing is saved until "
-         "you confirm, and anything ruled out says why."),
+         "Everything here is a suggestion. Untick anything, and nothing is "
+         "saved until you confirm."),
+        (".roster", "What cannot run",
+         "Each one says why: wrong sector, or a figure this company does not "
+         "report. A check that cannot run is never quietly dropped."),
+        (".wizard-actions", "Take the baseline",
+         "Confirming pins the roster and takes the first reading. Later scans "
+         "diff against it."),
+    ],
+    "/settings": [
+        (".account-card", "Who this is",
+         "Presentational only — Contour runs locally and has no accounts."),
+        (".set-group", "What comes from where",
+         "Anything set by the environment or the launch command is stated and "
+         "labelled, not dressed up as an editable field."),
+        (".theme-options", "Theme",
+         "System follows the machine; light and dark override it. The choice "
+         "is kept in this browser."),
     ],
 }
-
 
 def _tour(current: str) -> str:
     steps = TOURS.get(current) or []
@@ -916,19 +1021,24 @@ def _tour(current: str) -> str:
             f'Tour this page</button>{payload}')
 
 
-def _topbar(current: str, title: str) -> str:
+def _topbar(current: str, title: str, tour_key: str = "") -> str:
     """Where you are, how to get back, and the controls that follow you around."""
     name = next((n for href, n, _, _ in NAV_ITEMS if href == current), "")
     group = next((g for href, _, _, g in NAV_ITEMS if href == current), "")
     crumbs = (f'<span class="crumb-group">{esc(group)}</span>'
               f'<span class="crumb-sep">/</span><b>{esc(name)}</b>'
               if name else f"<b>{esc(title)}</b>")
+    tour_key = tour_key or current
     return f"""<div class="topbar">
+<button class="bar-button rail" type="button" data-nav-toggle
+        aria-label="Collapse or expand the sidebar">
+<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.6" y="3.6" width="14.8" height="12.8"
+rx="1.4"/><path d="M8 3.6v12.8"/></svg></button>
 <button class="bar-button back" type="button" data-back
         aria-label="Back to the previous page">
 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4 6 10l6 6"/></svg>Back</button>
 <div class="crumbs-bar">{crumbs}</div>
-<div class="bar-right">{_tour(current)}
+<div class="bar-right">{_tour(tour_key)}
 <button class="bar-button theme" type="button" data-theme-toggle
         aria-label="Switch between light and dark">
 <svg viewBox="0 0 20 20" aria-hidden="true" class="ico-sun"><circle cx="10" cy="10" r="3.6"/>
@@ -943,11 +1053,16 @@ HELP_BUBBLE = """<div class="help">
 <div class="help-panel" id="help-panel" hidden>
 <div class="help-head"><b>Help</b>
 <button type="button" class="help-close" data-help-close aria-label="Close help">&times;</button></div>
+<div class="help-tabs" role="tablist">
+<button type="button" class="help-tab on" data-help-tab="guide" role="tab">Guide</button>
+<button type="button" class="help-tab" data-help-tab="feedback" role="tab">Feedback</button>
+</div>
+<div class="help-body" data-help-pane="guide">
 <p>Contour reads primary filings and reports what moved between two of them.
 Nothing on a page is a model's opinion: every figure cites the accession it
 came from.</p>
 <ul>
-<li><b>Tour this page</b> in the bar above walks through what you are looking at.</li>
+<li><b>Tour this page</b> in the bar above walks through every section of it.</li>
 <li>A check can be <b>clean</b>, <b>not applicable</b>, or <b>unavailable</b>.
 Those are three different answers and never share a treatment.</li>
 <li><b>VERIFIED</b> means a Class-A primary source matched the company by CIK.
@@ -956,10 +1071,29 @@ Anything else reads <b>REPORTED</b>.</li>
 <p class="help-foot">This panel is written into the page — there is nobody on
 the other end of it.</p>
 </div>
+<form class="help-body" data-help-pane="feedback" method="post" action="/feedback" hidden>
+<label for="fb-kind">What is this?</label>
+<select id="fb-kind" name="kind">
+<option value="bug">Something is wrong</option>
+<option value="idea">Something is missing</option>
+<option value="note">Just a note</option>
+</select>
+<label for="fb-text">Tell us</label>
+<textarea id="fb-text" name="text" rows="4" required
+          placeholder="What happened, and what you expected instead"></textarea>
+<input type="hidden" name="page" data-feedback-page value="">
+<button type="submit">Send feedback</button>
+<p class="help-foot">Written to a file beside the app on this machine. It does
+not leave the machine, and nobody is notified.</p>
+</form>
+</div>
 <button class="help-button" type="button" data-help-toggle aria-expanded="false"
         aria-controls="help-panel" aria-label="Open help">
-<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-5 4z"/>
-<path d="M9.6 8.4a2.4 2.4 0 1 1 2.9 2.4v1.1M12.4 13.9v.1"/></svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" class="ico-bubble">
+<path d="M12 3.6c-4.7 0-8.4 3-8.4 6.8 0 2.1 1.2 4 3 5.2a7 7 0 0 1-1.8 3 .4.4 0 0 0 .4.6 8.6 8.6 0 0 0 4.1-1.7c.9.2 1.8.4 2.7.4 4.7 0 8.4-3 8.4-6.8s-3.7-7.5-8.4-7.5z"/>
+<circle cx="8.6" cy="10.4" r=".95" fill="currentColor" stroke="none"/>
+<circle cx="12" cy="10.4" r=".95" fill="currentColor" stroke="none"/>
+<circle cx="15.4" cy="10.4" r=".95" fill="currentColor" stroke="none"/></svg>
 </button></div>"""
 
 
@@ -977,6 +1111,9 @@ CHROME_SCRIPT = """<script>
     else { root.dataset.theme = mode; }
     document.querySelectorAll('[data-theme-label]').forEach(function (el) {
       el.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+    });
+    document.querySelectorAll('[data-theme-set]').forEach(function (el) {
+      el.classList.toggle('on', el.getAttribute('data-theme-set') === mode);
     });
     root.dataset.themeChoice = mode;
   }
@@ -1008,7 +1145,30 @@ CHROME_SCRIPT = """<script>
       if (btn) btn.setAttribute('aria-expanded', 'false');
       return;
     }
+    var pick = ev.target.closest('[data-theme-set]');
+    if (pick) {
+      var mode = pick.getAttribute('data-theme-set');
+      try { localStorage.setItem('contour-theme', mode); } catch (e) {}
+      paintTheme(mode);
+      return;
+    }
+    var tab = ev.target.closest('[data-help-tab]');
+    if (tab) {
+      var want = tab.getAttribute('data-help-tab');
+      document.querySelectorAll('[data-help-tab]').forEach(function (t) {
+        t.classList.toggle('on', t === tab);
+      });
+      document.querySelectorAll('[data-help-pane]').forEach(function (pane) {
+        if (pane.getAttribute('data-help-pane') === want) { pane.removeAttribute('hidden'); }
+        else { pane.setAttribute('hidden', ''); }
+      });
+      return;
+    }
     if (ev.target.closest('[data-tour-start]')) { startTour(); }
+  });
+  // Feedback is worth little without knowing which page it came from.
+  document.querySelectorAll('[data-feedback-page]').forEach(function (field) {
+    field.value = location.pathname + location.search;
   });
 
   // -- the tour ---------------------------------------------------------
@@ -1068,6 +1228,12 @@ CHROME_SCRIPT = """<script>
     frame();
     show(0);
   }
+  // A trigger that does nothing is worse than no trigger: if this page's steps
+  // all point at parts it did not render, take the control away.
+  collect();
+  if (!steps.length) {
+    document.querySelectorAll('[data-tour-start]').forEach(function (b) { b.remove(); });
+  }
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') stop();
   });
@@ -1093,14 +1259,14 @@ NAV_SCRIPT = """<script>
 </script>"""
 
 
-def _page(title: str, body: str, current: str = "") -> bytes:
+def _page(title: str, body: str, current: str = "", tour: str = "") -> bytes:
     collapsed = current == "/scan"
     return f"""<!doctype html><html lang="en" data-nav="{'closed' if collapsed else 'open'}">
 <head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title>{FONTS}
 <style>{CSS}{_EXTRA_CSS}</style></head><body>
-<div class="app">{_sidebar(current)}<main class="main">{_topbar(current, title.split(" — ")[0])}
+<div class="app">{_sidebar(current)}<main class="main">{_topbar(current, title.split(" — ")[0], tour or current)}
 <div class="shell">{body}</div></main></div>
 {HELP_BUBBLE}{_VEIL}{NAV_SCRIPT}{CHROME_SCRIPT}</body></html>""".encode()
 
@@ -2258,40 +2424,111 @@ def cadence_route(form: dict[str, list[str]]) -> bytes:
     return tracked_page(message=f"{ticker} will be rescanned {cadence}.")
 
 
-def settings_page() -> bytes:
-    """What this workspace is and where it keeps things.
+def save_feedback(form: dict[str, list[str]]) -> bytes:
+    """Append one note to a local file.
 
-    Read-only on purpose. Everything here is set by the environment or by the
-    command that started the server, and a control that looks editable but
-    writes nowhere is worse than a stated fact.
+    Deliberately local. There is no service behind this and pretending
+    otherwise — a thank-you that implies someone was told — would be the same
+    dishonesty the rest of the app exists to avoid.
     """
     from ledger import profile as _profile
+
+    text = (form.get("text", [""])[0] or "").strip()
+    kind = (form.get("kind", [""])[0] or "note").strip()
+    page = (form.get("page", [""])[0] or "").strip()
+    if not text:
+        raise SeeOther("/settings?fb=empty")
+    record = {
+        "at": _dt.now().isoformat(timespec="seconds"),
+        "kind": kind if kind in ("bug", "idea", "note") else "note",
+        "page": page[:200],
+        "text": text[:4000],
+    }
+    path = _profile.config_dir() / "feedback.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record) + "\n")
+    raise SeeOther("/settings?fb=saved")
+
+
+def settings_page(notice: str = "") -> bytes:
+    """A conventional account settings page.
+
+    Grouped the way people expect one: who you are, how it looks, where the
+    work is kept, what it talks to. Anything that comes from the environment
+    or the launch command is stated and marked as such rather than dressed as
+    an editable field — a control that writes nowhere is worse than a fact.
+    """
+    from ledger import profile as _profile
+
     name = os.environ.get("CONTOUR_USER_NAME", "").strip() or "Account"
-    email = os.environ.get("CONTOUR_USER_EMAIL", "").strip() or "not set"
-    agent = os.environ.get("SEC_USER_AGENT", "").strip() or "not set — EDGAR will refuse"
-    key = "set" if os.environ.get("ANTHROPIC_API_KEY", "").strip() else "not set"
-    facts = [
-        ("Name", name, "CONTOUR_USER_NAME"),
-        ("Email", email, "CONTOUR_USER_EMAIL"),
-        ("Profile", _profile.label(), "CONTOUR_PROFILE"),
-        ("Data", str(_profile.data_dir()), ""),
-        ("Config", str(_profile.config_dir()), ""),
-        ("SEC contact", agent, "SEC_USER_AGENT"),
-        ("Model key", key, "ANTHROPIC_API_KEY"),
-        ("Daily pass", "on" if DAILY["on"] else "off", "--daily"),
-    ]
-    cards = ""
-    for label, value, source in facts:
-        note = f'<small class="note">{esc(source)}</small>' if source else ""
-        cards += (f'<div class="setting"><span>{esc(label)}</span>'
-                  f"<b>{esc(value)}</b>{note}</div>")
+    email = os.environ.get("CONTOUR_USER_EMAIL", "").strip()
+    initials = "".join(part[0] for part in name.split()[:2] if part).upper() or "A"
+    agent = os.environ.get("SEC_USER_AGENT", "").strip()
+    key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    feedback = _profile.config_dir() / "feedback.jsonl"
+    notes = 0
+    if feedback.exists():
+        notes = sum(1 for line in feedback.read_text(encoding="utf-8").splitlines() if line.strip())
+
+    def row(label: str, value: str, hint: str = "", tone: str = "") -> str:
+        return (f'<div class="set-row"><div class="set-label"><b>{esc(label)}</b>'
+                f'{f"<small>{esc(hint)}</small>" if hint else ""}</div>'
+                f'<div class="set-value {tone}">{value}</div></div>')
+
+    def text(value: str, missing: str = "Not set") -> str:
+        return (f"<span>{esc(value)}</span>" if value
+                else f'<span class="unset">{esc(missing)}</span>')
+
+    themes = "".join(
+        f'<button type="button" class="theme-option" data-theme-set="{key_}">'
+        f"{esc(label)}</button>"
+        for key_, label in (("system", "System"), ("light", "Light"), ("dark", "Dark")))
+
+    flash = f'<div class="flash">{esc(notice)}</div>' if notice else ""
+
     body = f"""<header class="masthead"><h1>Settings</h1></header>
-<section class="check"><div class="check-head"><h2>Workspace</h2></div>
-<div class="settings-grid">{cards}</div>
+{flash}
+<div class="account-card">
+<span class="avatar big" aria-hidden="true">{esc(initials)}</span>
+<div class="account-card-text"><b>{esc(name)}</b>
+<span>{esc(email or "No email set")}</span></div>
+<span class="account-card-tag">Local workspace</span>
+</div>
+
+<section class="set-group"><h2>Profile</h2>
+{row("Display name", text(name), "Shown in the sidebar · CONTOUR_USER_NAME")}
+{row("Email", text(email), "CONTOUR_USER_EMAIL")}
+{row("Sign-in", '<span class="unset">None — this workspace is not authenticated</span>',
+     "Contour runs locally and has no accounts")}
 </section>
-<section class="check"><div class="check-head"><h2>Appearance</h2></div>
-<p class="count-line">Theme follows the control in the bar above: system, light
-or dark. The choice is kept in this browser.</p>
+
+<section class="set-group"><h2>Appearance</h2>
+{row("Theme", f'<div class="theme-options" data-theme-options>{themes}</div>',
+     "Kept in this browser")}
+</section>
+
+<section class="set-group"><h2>Workspace</h2>
+{row("Profile", text(_profile.label()), "CONTOUR_PROFILE")}
+{row("Data", f"<code>{esc(str(_profile.data_dir()))}</code>", "Ledger, caches and scans")}
+{row("Config", f"<code>{esc(str(_profile.config_dir()))}</code>", "Sources, presets, mappings")}
+{row("Background pass", "On" if DAILY["on"] else "Off",
+     "Start the server with --daily to enable it",
+     "" if DAILY["on"] else "muted")}
+</section>
+
+<section class="set-group"><h2>Connections</h2>
+{row("SEC contact", text(agent, "Not set — EDGAR will refuse every request"),
+     "SEC_USER_AGENT", "" if agent else "bad")}
+{row("Model key", "Set" if key else '<span class="unset">Not set</span>',
+     "ANTHROPIC_API_KEY · summaries and authored checks need it",
+     "" if key else "muted")}
+</section>
+
+<section class="set-group"><h2>Feedback</h2>
+{row("Notes recorded", f"{notes:,}", f"Appended to {feedback}")}
+{row("Where it goes", '<span class="unset">Nowhere — this file stays on this machine</span>',
+     "No service is contacted")}
 </section>"""
     return _page("Settings — Contour", body, current="/settings")
 
@@ -2526,7 +2763,7 @@ def _wizard_shell(step: int, title: str, body: str, sub: str = "") -> bytes:
 {f'<p class="lede">{sub}</p>' if sub else ""}
 </header>
 <div class="crumbs">{crumbs}</div>
-{body}""", current="/add")
+{body}""", current="/add", tour="/add/review" if step else "/add")
 
 
 def scan_page() -> bytes:
@@ -2943,7 +3180,10 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/tracked":
                 payload = tracked_page()
             elif parsed.path == "/settings":
-                payload = settings_page()
+                sent = parse_qs(parsed.query).get("fb", [""])[0]
+                payload = settings_page(
+                    notice="Feedback recorded." if sent == "saved"
+                    else ("Nothing was written — the note was empty." if sent == "empty" else ""))
             elif parsed.path == "/sources":
                 query = parse_qs(parsed.query)
                 payload = sources_page(message=(query.get("ok", [""])[0]),
@@ -3015,6 +3255,8 @@ class Handler(BaseHTTPRequestHandler):
                 payload = reject_entity_route(self.client, form)
             elif parsed.path == "/authored/forget":
                 payload = forget_checks_route(form)
+            elif parsed.path == "/feedback":
+                payload = save_feedback(form)
             elif parsed.path == "/entities/set":
                 payload = set_entities_route(self.client, form)
             elif parsed.path == "/presets/remove":
@@ -3025,7 +3267,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(303)
             self.send_header("Location", redirect.location)
             self.end_headers()
-            return
+            return  # noqa: TRY300 — a redirect is a normal outcome here
         except Exception:  # noqa: BLE001 — never return a bare 500 to the browser
             payload = _page("Error", f'<div class="error"><p>{esc(traceback.format_exc()[-600:])}</p></div>')
         self._respond(payload)
