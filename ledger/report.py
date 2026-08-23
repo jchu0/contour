@@ -219,10 +219,13 @@ def _revenue_composition(client: EdgarClient, filing: Filing, source: Source):
                 evidence={k: _money(v) for k, v in f.evidence.items()},
                 source=located,
             ))
+        moved_total = sum(a.change for a in attributions)
         for a in offsets(attributions):
+            moved, share = a.offset_phrase(moved_total).split("|")
+            verb, _, amount = moved.partition(" ")
             check.add(Item(
                 severity="info",
-                headline=f"{a.member} grew {_money(a.change)}, masking {abs(a.change_share):.0%} of the decline",
+                headline=f"{a.member} {verb} {_money(abs(a.change))}, {share}",
                 source=located,
             ))
 

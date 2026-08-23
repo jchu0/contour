@@ -159,3 +159,43 @@ def composition_svg(attributions: list) -> str:
         parts.append(f'<p class="chart-note">{hidden} smaller component'
                      f'{"s" if hidden != 1 else ""} not plotted</p>')
     return "".join(parts)
+
+
+def sparkline_svg(closes: dict, *, days: int = 180, width: int = 132,
+                  height: int = 30) -> tuple[str, float | None]:
+    """(svg, change_pct) for the last `days` of closes, or ("", None).
+
+    Market data, not filings — the caller is responsible for saying so. A price
+    line beside computed findings is context for how the market read a company,
+    never evidence of anything the company reported.
+    """
+    if not closes:
+        return "", None
+    from datetime import date, timedelta
+
+    cutoff = date.today() - timedelta(days=days)
+    points = [(d, v) for d, v in sorted(closes.items()) if d >= cutoff]
+    if len(points) < 8:
+        return "", None
+    values = [v for _, v in points]
+    low, high = min(values), max(values)
+    span = (high - low) or 1.0
+    step = width / (len(values) - 1)
+    coords = [
+        (i * step, height - 1 - ((v - low) / span) * (height - 2))
+        for i, v in enumerate(values)
+    ]
+    path = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in coords)
+    change = ((values[-1] - values[0]) / values[0] * 100) if values[0] else None
+    tone = "up" if (change or 0) >= 0 else "down"
+    area = (f"{path} L{coords[-1][0]:.1f} {height} L0 {height} Z")
+    return (
+        f'<svg class="spark {tone}" viewBox="0 0 {width} {height}" '
+        f'width="{width}" height="{height}" aria-hidden="true" '
+        f'preserveAspectRatio="none">'
+        f'<path class="spark-area" d="{area}"/>'
+        f'<path class="spark-line" d="{path}"/>'
+        f'<circle class="spark-end" cx="{coords[-1][0]:.1f}" cy="{coords[-1][1]:.1f}" r="2"/>'
+        f"</svg>",
+        change,
+    )

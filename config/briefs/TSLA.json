@@ -4,28 +4,24 @@
   "written": "2026-08-23",
   "provenance": "simulated",
   "brief": {
-    "headline": "Tesla's reported revenue moved down 2.9% while operating income fell 38%, with a shrinking regulatory-credit line carrying a quarter of the top-line movement, growth in energy and services offsetting most of it, and interest income supplying about a third of pre-tax income.",
+    "headline": "Revenue moved -2.9% while operating income fell 38%, with interest income supplying 32% of pre-tax income and a regulatory-credit line at 2.8% of revenue carrying 26.9% of the top-line change.",
     "threads": [
       {
-        "title": "What held the top line up",
-        "reading": "Revenue moved from $97.69B to $94.83B, a 2.9% decline. Automotive regulatory credits, 2.8% of the prior-period base, fell $0.77B and carried 26.9% of the total movement \u2014 9.5x its weight. Two non-vehicle lines pulled the other way: energy generation and storage grew $2.71B, masking 95% of the decline, and services and other grew $2.00B, masking 70% of it. The composition of the reported number changed more than the number did.",
+        "title": "Earnings composition",
+        "reading": "Revenue moved -2.9%, from $97.69B to $94.83B, while operating income fell 38%, from $7.08B to $4.36B, which the financial condition check reads as a change in cost structure or pricing rather than volume (Class A, 10-K filed 2026-01-29). Of $5.28B pre-tax income, $1.68B \u2014 32% \u2014 is interest income, which moves with rates and cash balances rather than with demand for the product. The same shape appears in the most recent testable quarter: the company's release states revenue up 26% YoY to $28.2B and operating income down 57% to $0.4B at a 1.4% margin, and the claims check matched both to figures reported to the SEC for 2026-06-30.",
         "supporting": [
-          "Energy generation and storage sales grew $2.71B, offsetting 95% of the period's decline (Class A, Revenue composition check, 10-K disaggregation of revenue, R44).",
-          "Services and other grew $2.00B, offsetting 70% of the decline (Class A, Revenue composition check, R44).",
-          "The company's quarterly earnings release stating revenue of $28.2B for the period ended 2026-06-30 matched the $28.24B reported to the SEC, a 0.13% difference (Class B release, tested against Class A filings by the Management claims check)."
+          "Revenue held close to flat, moving -2.9% from $97.69B to $94.83B (Financial condition check, Class A, 10-K filed 2026-01-29).",
+          "The release's stated quarterly revenue of $28.20B was matched against $28.24B reported to the SEC for 2026-06-30, a 0.13% difference (Management claims check, Class B release against Class A figures).",
+          "The release's stated quarterly operating income of $400.00M was matched against $398.00M reported to the SEC, a 0.50% difference \u2014 what was said publicly and what was filed agree (Management claims check)."
         ],
         "against": [
-          "Automotive regulatory credits fell $0.77B, from $2.76B to $1.99B, and accounted for 26.9% of the total revenue movement while being 2.8% of revenue (Class A, Revenue composition check, R44).",
-          "Total revenue still fell 2.9%, from $97.69B to $94.83B, after those offsets (Class A, Financial condition check, consolidated statements of operations, R5)."
+          "Operating income fell 38% against a -2.9% revenue move (Financial condition check, high severity, Class A).",
+          "Interest income of $1.68B is 32% of $5.28B pre-tax income \u2014 a large share of pre-tax income comes from the balance sheet rather than operations (Financial condition check, Class A).",
+          "The release the claims check verified states operating income down 57% YoY at a 1.4% operating margin for the quarter ended 2026-06-30, a steeper version of the annual pattern (Class B release, figures matched to Class A)."
         ],
         "sources": [
           {
-            "label": "10-K disaggregation of revenue by major source (Details), filed 2026-01-29",
-            "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/R44.htm",
-            "klass": "A"
-          },
-          {
-            "label": "10-K consolidated statements of operations, filed 2026-01-29",
+            "label": "Consolidated Statements of Operations, 10-K filed 2026-01-29",
             "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/R5.htm",
             "klass": "A"
           },
@@ -37,63 +33,59 @@
         ]
       },
       {
-        "title": "Where the earnings come from",
-        "reading": "Operating income fell 38%, from $7.08B to $4.36B, against a 2.9% move in revenue \u2014 the deterioration sits in cost structure or pricing rather than volume. Below the operating line, interest income of $1.68B was 32% of $5.28B in pre-tax income, so roughly a third of pre-tax earnings tracks rates and cash balances rather than the product business. The company's own quarterly release describes the same direction at a steeper rate.",
+        "title": "Revenue composition",
+        "reading": "Automotive regulatory credits are 2.8% of revenue but carried 26.9% of the total revenue change, falling $770.00M from $2.76B to $1.99B \u2014 9.5x the line's weight (Revenue composition, Class A). Two lines moved the other way: energy generation and storage sales grew $2.71B, masking 95% of the period's decline, and services and other grew $2.00B, masking 70%. The reported top line still fell 2.9%, so the growth sits in lines outside vehicle sales while the credit line shrank.",
         "supporting": [
-          "The company disclosed the operating decline itself: the release quoted a 57% YoY drop in quarterly operating income to $0.4B and a 1.4% operating margin, and the $400M stated matched the $398M reported to the SEC within 0.50% (Class B release, tested against Class A by the Management claims check).",
-          "Interest income of $1.68B is a reported line in the consolidated statements of operations, not an estimate (Class A, Financial condition check, R5)."
+          "Energy generation and storage sales grew $2.71B, masking 95% of the decline (Revenue composition check, Class A, disaggregation of revenue schedule).",
+          "Services and other grew $2.00B, masking 70% of the decline (same check, Class A).",
+          "Both growing lines are reported in the same disaggregation schedule as the shrinking one, read from the 10-K filed 2026-01-29 (Class A)."
         ],
         "against": [
-          "Operating income fell 38% ($7.08B to $4.36B) while revenue moved -2.9% (Class A, Financial condition check, R5).",
-          "Interest income at 32% of pre-tax income means a large share of pre-tax earnings moves with rates and cash balances rather than with demand for the product (Class A, Financial condition check, R5).",
-          "8 of the 10 management claims the review attempted were not testable against filed figures, so the release's framing beyond revenue and operating income was not verified (Class A/B, Management claims check)."
+          "Automotive regulatory credits fell $770.00M, from $2.76B to $1.99B, carrying 26.9% of the total movement while making up 2.8% of the prior-period base \u2014 9.5x its weight, flagged high severity (Revenue composition, Class A).",
+          "Even with both growing lines, revenue still moved -2.9% for the year (Financial condition check, Class A).",
+          "Operating income fell 38% over the same period in which energy generation and storage grew $2.71B and services and other grew $2.00B (Financial condition and Revenue composition checks, both Class A)."
         ],
         "sources": [
           {
-            "label": "10-K consolidated statements of operations, filed 2026-01-29",
-            "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/R5.htm",
+            "label": "Disaggregation of Revenue by Major Source (Details), 10-K filed 2026-01-29",
+            "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/R44.htm",
             "klass": "A"
           },
           {
-            "label": "Company earnings release (8-K EX-99), 2026-07-22",
-            "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049213/exhibit991.htm",
-            "klass": "B"
+            "label": "Consolidated Statements of Operations, 10-K filed 2026-01-29",
+            "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/R5.htm",
+            "klass": "A"
           }
         ]
       },
       {
         "title": "Risk language against the safety record",
-        "reading": "Across 38 risk factors the 2025 10-K added 2, removed 3, modified 30 and left 6 unchanged. The removed high-signal item described demand for the company's vehicles in an automotive industry that is generally competitive and cyclical; the added item recasts that dependency as demand for electric vehicles and adoption of autonomous driving solutions, and a second addition covers Bots, including Optimus, in a nascent industry. Set beside that, the safety record shows six campaigns in the 2024-2026 window out of 16 on record, and a Federal Register notice of a denied petition for a decision of inconsequential noncompliance.",
+        "reading": "Across 38 risk factors the filing added 2, removed 3, modified 30 and left 6 unchanged. The removed demand factor framed growth around consumers' demand for electric vehicles in an industry described as generally competitive and cyclical; the added one frames growth around demand for electric vehicles and adoption of autonomous driving solutions, and a second addition covers Bots, including Optimus, in what the filing calls a nascent industry that has yet to develop commercially. Over the same window the safety check recorded six NHTSA campaigns between 2025-03-18 and 2026-07-07, four of them on Cybertruck, out of 16 on record.",
         "supporting": [
-          "The removed demand risk factor was replaced rather than dropped: the added factor restates growth as dependent on EV demand and on adoption of autonomous driving solutions (Class A, Filing language check, 10-K filed 2026-01-29).",
-          "The filing was actively revised rather than thinned \u2014 30 of 38 risk factors modified, only 6 unchanged, and a new dependency on Bots/Optimus disclosed (Class A, Filing language check).",
-          "Federal Register notices show authorized and expanded foreign-trade-zone production activity for battery storage products in California and Texas, corroborating activity in the energy line that grew $2.71B (Class A, Federal Register, 2026-03-03 through 2026-08-03)."
+          "The risk section was actively revised rather than carried forward: 30 of 38 factors modified, only 6 unchanged (Filing language check, Class A).",
+          "The added factors disclose new subject matter \u2014 autonomous driving adoption and Bots including Optimus \u2014 in the current 10-K (Filing language check, Class A, 10-K filed 2026-01-29).",
+          "The NHTSA descriptions are narrowly scoped: vehicles originally built for a foreign market, a missing certification label, a service-installed accessory light bar, and parking-light brightness above a maximum (Safety record check, Class A)."
         ],
         "against": [
-          "The explicit competitive-and-cyclical framing of vehicle demand was removed in a period when revenue fell 2.9% and automotive regulatory credits fell $0.77B (Class A, Filing language check plus Revenue composition check).",
-          "A risk factor on increased scrutiny and changing stakeholder expectations regarding ESG practices was removed, as was one on obligations tied to Gigafactory New York (Class A, Filing language check, 2024 10-K text).",
-          "NHTSA records six campaigns in the window, including Cybertruck brake rotor stud holes that may crack and allow a stud to separate from the wheel hub (26V255000) and a light bar that can delaminate and detach (25V170000), with 16 campaigns on record overall (Class A, NHTSA).",
-          "A Federal Register notice dated 2026-07-17 records the denial of a Tesla petition for a decision of inconsequential noncompliance (Class A, Federal Register)."
+          "Six recall campaigns fall between 2025-03-18 and 2026-07-07, four on Cybertruck, including brake rotor stud holes that may crack and allow the stud to separate from the wheel hub, campaign 26V255000 reported 2026-04-22 (Safety record, Class A, NHTSA).",
+          "A Federal Register notice dated 2026-07-17 records denial of a Tesla petition for decision of inconsequential noncompliance (Federal Register, listed Class A in the corroborating feed).",
+          "Three factors were removed in the same revision \u2014 the prior demand factor, obligations under the agreement with the Research Foundation for the State University of New York relating to Gigafactory New York, and one on scrutiny and changing expectations regarding ESG practices (Filing language check, high severity, Class A).",
+          "Class F headlines dated 2026-08-21 and 2026-08-22 describe a recall of nearly 3 million vehicles in China over door handles; nothing in the Class A material covers it, and the safety check is scoped to NHTSA (Hacker News mentions, Class F \u2014 corroboration only)."
         ],
         "sources": [
           {
-            "label": "10-K risk factors, filed 2026-01-29",
+            "label": "Risk factors, 10-K filed 2026-01-29",
             "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026003952/tsla-20251231.htm",
             "klass": "A"
           },
           {
-            "label": "Prior 10-K risk factors, filed 2025-01-30",
+            "label": "Risk factors, prior 10-K filed 2025-01-30",
             "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828025003063/tsla-20241231.htm",
             "klass": "A"
           },
           {
-            "label": "NHTSA recall 26V255000, Cybertruck wheel studs, 2026-04-22",
+            "label": "NHTSA campaign 26V255000, Cybertruck wheel studs",
             "url": "https://www.nhtsa.gov/recalls?nhtsaId=26V255000",
-            "klass": "A"
-          },
-          {
-            "label": "NHTSA recall 25V170000, Cybertruck light bar, 2025-03-18",
-            "url": "https://www.nhtsa.gov/recalls?nhtsaId=25V170000",
             "klass": "A"
           },
           {
@@ -102,41 +94,48 @@
             "klass": "A"
           },
           {
-            "label": "Federal Register: FTZ 18 authorization, battery storage production, 2026-08-03",
-            "url": "https://www.federalregister.gov/documents/2026/08/03/2026-15661/foreign-trade-zone-ftz-18-authorization-of-production-activity-tesla-inc-battery-storage-products",
-            "klass": "A"
+            "label": "Reuters via Hacker News: record vehicle recall in China, 2026-08-21",
+            "url": "https://www.reuters.com/world/tesla-fix-software-millions-china-made-imported-evs-china-2026-08-21/",
+            "klass": "F"
           }
         ]
       },
       {
-        "title": "The comparison base moved",
-        "reading": "Two closed periods were revised after the fact in the XBRL company facts. Net income for the quarter ended 2024-06-30 was first filed at $1,478M and later filed at $1,400M, a 5.3% reduction; net income for the quarter ended 2024-03-31 was first filed at $1,129M and later filed at $1,390M, a 23.1% increase. Both revisions changed the base that year-over-year comparisons are drawn against, and neither carries a separate announcement in this material.",
+        "title": "The comparison base",
+        "reading": "Two closed-period net income figures for 2024 were revised after the fact. The period ending 2024-06-30 was lowered from $1,478,000,000 as first filed on 2024-07-24 to $1,400,000,000 in a filing dated 2025-07-24, a change of -5.3%. The period ending 2024-03-31 was raised from $1,129,000,000 to $1,390,000,000, +23.1%, in a filing dated 2025-04-23. Both land inside the prior-year base that this year's comparisons run against.",
         "supporting": [
-          "The revisions run in both directions \u2014 one down 5.3%, one up 23.1% \u2014 rather than uniformly in one direction (Class A, Restatements check, SEC XBRL company facts).",
-          "Of 351 reported figures on file, 0 were new to the ledger, so the review found no figures appearing without a prior filed counterpart (Class A, Restatements check)."
+          "351 reported figures are on file with 0 new to the ledger \u2014 the set of concepts being reported did not change (Restatements check, Class A, SEC XBRL company facts).",
+          "The two revisions run in opposite directions, one down 5.3% and one up 23.1% (Restatements check, Class A).",
+          "Both management statements that could be tested matched the figures filed with the SEC, within 0.13% and 0.50% (Management claims check, Class B release against Class A figures)."
         ],
         "against": [
-          "Net income for the period ending 2024-06-30 was lowered from $1,478M to $1,400M in a filing dated 2025-07-24, a year after the original (Class A, Restatements check).",
-          "Net income for the period ending 2024-03-31 was raised from $1,129M to $1,390M in a filing dated 2025-04-23, a 23.1% change to a closed period (Class A, Restatements check).",
-          "A closed-period revision of this size changes every comparison drawn against that quarter, and the material contains no accompanying explanation (Class A, Restatements check)."
+          "Net income for the period ending 2024-06-30 was lowered from $1,478,000,000 to $1,400,000,000 a year after the original filing (Restatements check, high severity, Class A).",
+          "Net income for the period ending 2024-03-31 was raised from $1,129,000,000 to $1,390,000,000, a 23.1% change to a closed period (Restatements check, high severity, Class A).",
+          "The check's own note records that closed-period revisions are rarely announced and change every comparison drawn against them (Restatements check, Class A)."
         ],
         "sources": [
           {
-            "label": "SEC XBRL company facts, CIK 1318605",
+            "label": "SEC XBRL company facts, CIK 0001318605",
             "url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0001318605.json",
             "klass": "A"
+          },
+          {
+            "label": "Company earnings release (8-K EX-99), 2026-07-22",
+            "url": "https://www.sec.gov/Archives/edgar/data/1318605/000162828026049213/exhibit991.htm",
+            "klass": "B"
           }
         ]
       }
     ],
-    "corroboration": "The Class F material \u2014 news aggregator links, and in one case a community post on a social forum, which is the weakest item here and establishes nothing \u2014 carries headlines dated 2026-08-20 to 2026-08-22 reporting a vehicle recall of roughly three million cars in China over door handles and the discontinuation of the Solar Roof tile product; nothing in the filed material confirms either, and neither can be treated as established. The Federal Register notices (Class A) do corroborate two things the filings touch: battery-storage production activity in the energy line, and an interaction with the vehicle safety regulator, though they say nothing about amounts or effect.",
+    "corroboration": "The Class B earnings release is the only non-primary source that could be matched to filed figures, and both matched, within 0.13% and 0.50%. The Class F material \u2014 press surfaced through Hacker News plus one community post, the weakest item on the page \u2014 points at a China recall of nearly 3 million vehicles over door handles and at the discontinuation of the Solar Roof; neither has a Class A counterpart here, and Class F can flag the subject but settles nothing. The Federal Register notices listed alongside it are labelled Class A and include the 2026-07-17 denied petition and several foreign-trade-zone authorizations for battery storage production.",
     "not_checked": [
-      "8 of 10 management claims from the earnings release were not testable against filed figures; only the revenue and operating income statements could be compared.",
-      "30 of 38 risk factors were modified year over year and only a sample of the changes was surfaced, so the full extent of the rewriting is not established here.",
-      "16 recall campaigns are on record but only six fall in the 2024-2026 model-year window examined; the remainder were not detailed, and vehicle counts for any campaign are not in the material.",
-      "The Class F reports of a China recall and of the Solar Roof being discontinued have no corresponding filing in this material, so their effect on the energy line that grew $2.71B could not be checked.",
-      "The contents of the 10-Q filed 2026-07-23 and the 8-Ks in the filing feed were not examined beyond the earnings release exhibit.",
-      "Segment-level or product-level profitability was not available; the composition findings cover revenue only."
+      "8 of 10 management claims were not testable against a filed figure; only quarterly revenue and operating income for 2026-06-30 could be matched (Management claims check).",
+      "NHTSA coverage is scoped to make 'tesla', model years 2024-2026, so campaigns outside that make and year range are not reflected beyond the count of 16 on record.",
+      "Per-share figures are excluded from the restatement check, so any revision expressed only per share would not surface.",
+      "The Class F reports of a China recall and of the Solar Roof being discontinued have no Class A counterpart in this material and could not be checked against any filing.",
+      "Revenue composition was read from the annual disaggregation schedule only; no interim period composition was checked.",
+      "The SEC filing feed lists a 10-Q filed 2026-07-23 and several Form 4, Form 144 and Schedule 13G/A filings, but their contents were not part of any check.",
+      "Three risk factor excerpts are truncated mid-sentence in the material, so the full text of the removed demand factor and of the rewritten Musk share-pledge factor could not be read."
     ]
   }
 }

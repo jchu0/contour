@@ -37,6 +37,20 @@ class Attribution:
     def direction(self) -> str:
         return "grew" if self.change > 0 else "fell"
 
+    def offset_phrase(self, total_change: float) -> str:
+        """How this component moved against the total, in words.
+
+        Both halves were hardcoded once — "grew ... masking the decline" — which
+        is only right when a rising component offsets a falling total. Rivian
+        reads the other way, and produced "grew $-522.00M, masking 125% of the
+        decline" for a component that fell inside a total that rose.
+        """
+        moved = "grew" if self.change > 0 else "fell"
+        against = "the decline" if total_change < 0 else "the growth"
+        verb = "masking" if total_change < 0 else "offsetting"
+        return (f"{moved} {abs(self.change):,.0f}|{verb} "
+                f"{abs(self.change_share):.0%} of {against}")
+
 
 def decompose(breakdown: Breakdown, current: int = 0, prior: int = 1) -> list[Attribution]:
     """Attribute the change in the total across its leaf components."""
@@ -66,6 +80,11 @@ def decompose(breakdown: Breakdown, current: int = 0, prior: int = 1) -> list[At
             )
         )
     return sorted(out, key=lambda a: abs(a.change_share), reverse=True)
+
+
+def total_change(attributions: list[Attribution]) -> float:
+    """The movement the components were attributed against."""
+    return sum(a.change for a in attributions)
 
 
 def offsets(attributions: list[Attribution]) -> list[Attribution]:

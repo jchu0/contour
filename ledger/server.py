@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime as _dt
 import os
+import pathlib
 import threading
 import time
 import traceback
@@ -172,6 +173,18 @@ padding:.6rem .8rem;border-bottom:1px solid var(--rule)}
 font-variant-numeric:tabular-nums}
 .wl td.go{text-align:right;white-space:nowrap}
 .wl td.go a{font-family:var(--mono);font-size:.75rem}
+.price{display:flex;align-items:center;gap:.5rem}
+.price-cell{white-space:nowrap}
+.spark{display:block;flex:none;overflow:visible}
+.spark-line{fill:none;stroke-width:1.5;vector-effect:non-scaling-stroke}
+.spark-area{stroke:none;opacity:.14}
+.spark.up .spark-line,.spark.up .spark-end{stroke:var(--pass);fill:none}
+.spark.up .spark-area,.spark.up .spark-end{fill:var(--pass)}
+.spark.down .spark-line,.spark.down .spark-end{stroke:var(--high);fill:none}
+.spark.down .spark-area,.spark.down .spark-end{fill:var(--high)}
+.price b{font-family:var(--mono);font-size:.75rem;font-variant-numeric:tabular-nums}
+.price b.up{color:var(--pass)}
+.price b.down{color:var(--high)}
 .chip{font-family:var(--mono);font-size:.6875rem;padding:.15rem .5rem;
 background:var(--surface-2);color:var(--ink-3);white-space:nowrap}
 .chip.warn{background:var(--med-soft);color:var(--med)}
@@ -420,9 +433,9 @@ letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowr
   border-right:1px solid var(--rule)}
 .brand{display:flex;align-items:center;gap:.6rem;padding:.25rem .5rem;
   text-decoration:none;color:var(--ink)}
-.brand-mark{display:grid;place-items:center;width:1.9rem;height:1.9rem;flex:none;
-  border-radius:6px;background:var(--accent);color:var(--paper);
-  font-family:var(--mono);font-size:.625rem;font-weight:700;letter-spacing:.02em}
+/* The mark is dark navy and teal; it needs a light ground in both themes. */
+.brand-mark{display:block;width:1.9rem;height:1.9rem;flex:none;border-radius:6px;
+background:#F5F6F8;padding:.15rem;object-fit:contain}
 .brand-name{font-weight:600;font-size:.9375rem;letter-spacing:-.01em}
 .nav-list{display:flex;flex-direction:column;gap:.15rem}
 .nav-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .5rem;
@@ -902,6 +915,28 @@ def _nav_badges() -> dict[str, tuple[str, str]]:
     return out
 
 
+_MARK_URI: str | None = None
+
+
+def _mark() -> str:
+    """The Contour mark, inlined.
+
+    The app serves no static files, so the logo rides as a data URI. It is read
+    once and kept: a brand mark that hits the disk on every page render is a
+    page that breaks when someone moves the file.
+    """
+    global _MARK_URI
+    if _MARK_URI is None:
+        import base64
+        path = pathlib.Path(__file__).resolve().parent.parent / "assets" / "contour-mark-64.png"
+        try:
+            _MARK_URI = "data:image/png;base64," + base64.b64encode(
+                path.read_bytes()).decode("ascii")
+        except OSError:
+            _MARK_URI = ""
+    return _MARK_URI
+
+
 def _sidebar(current: str = "") -> str:
     """One nav for every page, in two widths.
 
@@ -933,7 +968,7 @@ def _sidebar(current: str = "") -> str:
     # The toggle lives in the top bar, not in the rail. Inside the rail it had
     # nowhere to go when the rail narrowed, and ended up on the brand mark.
     return (f'<aside class="sidebar">'
-            f'<a class="brand" href="/"><span class="brand-mark">CT</span>'
+            f'<a class="brand" href="/"><img class="brand-mark" src="{_mark()}" alt="" width="28" height="28">'
             f'<span class="brand-name nav-label">Contour</span></a>'
             f'<nav class="nav-list">{"".join(blocks)}</nav>'
             f'<div class="sidebar-foot">{_account()}</div></aside>')
@@ -1398,6 +1433,26 @@ def _tracked() -> list:
         return []
 
 
+def _price_cell(ticker: str) -> str:
+    """Six months of closes, drawn small.
+
+    The one number on this page that does not come from a filing, so it is
+    labelled market data and kept out of the findings. It is context for how
+    the market read a company, never evidence about what the company reported.
+    """
+    try:
+        from ledger.charts import sparkline_svg
+        from ledger.prices import daily_closes
+        svg, change = sparkline_svg(daily_closes(ticker))
+    except Exception:  # noqa: BLE001 — a price feed must never cost the page
+        return '<span class="sub">—</span>'
+    if not svg or change is None:
+        return '<span class="sub">—</span>'
+    tone = "up" if change >= 0 else "down"
+    return (f'<span class="price">{svg}'
+            f'<b class="{tone}">{change:+.1f}%</b></span>')
+
+
 def _watchlist_table() -> str:
     rows = _tracked()
     if not rows:
@@ -1415,12 +1470,14 @@ def _watchlist_table() -> str:
                  f'<td class="sub">{esc(t.last_scan or "—")}</td>'
                  f'<td class="num">{t.scans:,}</td>'
                  f'<td class="num">{t.baseline_facts:,}</td>'
+                 f'<td class="price-cell">{_price_cell(t.ticker)}</td>'
                  f"<td>{delta}</td>"
                  f'<td class="go"><a href="/scan?a={esc(t.ticker)}">Scan ›</a></td></tr>')
     return (f'<div class="wl"><table><thead><tr><th scope="col">Ticker</th>'
             f'<th scope="col">Company</th><th scope="col">Last scan</th>'
             f'<th scope="col" class="num">Scans</th>'
             f'<th scope="col" class="num">Baseline figures</th>'
+            f'<th scope="col">Price · 6mo</th>'
             f'<th scope="col">Since last scan</th><th scope="col"></th></tr></thead>'
             f"<tbody>{body}</tbody></table></div>")
 
@@ -1591,11 +1648,24 @@ def _digest_html() -> str:
         return ""
     if not digest or not digest.get("headline"):
         return ""
+    # The brief is about what you watch. A digest that also covers companies
+    # you scanned once and moved on from reads as a watchlist you do not have.
+    watched = {t.ticker for t in _tracked()}
+    rows = [r for r in (digest.get("lines") or [])
+            if r.get("ticker") and (not watched or r["ticker"] in watched)]
+    if watched and not rows:
+        return ""
+    missing = sorted(watched - {r["ticker"] for r in rows})
     lines = "".join(
         f'<div class="digest-line"><a href="/scan?a={esc(str(row.get("ticker", "")))}">'
         f'{esc(str(row.get("ticker", "")))}</a>'
         f'<span>{esc(str(row.get("note", "")))}</span></div>'
-        for row in (digest.get("lines") or []) if row.get("ticker"))
+        for row in rows)
+    if missing:
+        lines += ('<div class="digest-line"><a href="/tracked">'
+                  + ", ".join(esc(t) for t in missing) + "</a>"
+                  "<span>tracked, but not in this brief — rescan to include them"
+                  "</span></div>")
     gaps = "".join(f"<li>{esc(str(g))}</li>" for g in (digest.get("gaps") or []))
     written = digest.get("written", "")
     model = digest.get("model", "a language model")
@@ -1621,8 +1691,7 @@ def landing() -> bytes:
 
     body = f"""<div class="overview">
 <div class="ov-main">
-<header class="masthead"><h1>Overview</h1>{_form()}</header>
-{_suggestions()}
+<header class="masthead"><h1>Overview</h1></header>
 {_digest_html()}
 <section class="panel"><div class="panel-head"><h2>Watchlist</h2>
 <a href="/tracked">Manage &rarr;</a></div>{watchlist}</section>
