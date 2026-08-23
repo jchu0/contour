@@ -11,6 +11,8 @@ both clear of the 15 floor, and both above 3:1 contrast on their surface.
 
 from __future__ import annotations
 
+import math
+
 import html
 
 # Beyond this the bars are too thin to read and the labels collide. Disney files
@@ -201,13 +203,49 @@ def sparkline_svg(closes: dict, *, days: int = 180, width: int = 132,
     )
 
 
-def price_chart_svg(closes: dict, *, days: int = 365, width: int = 640,
-                    height: int = 150) -> dict | None:
-    """A price line with its own extremes labelled, or None.
+def _price_ticks(low: float, high: float, count: int = 5) -> list[float]:
+    """Round tick values spanning the range, so the axis reads in real money."""
+    span = high - low
+    if span <= 0:
+        return [low]
+    raw = span / (count - 1)
+    magnitude = 10 ** math.floor(math.log10(raw))
+    for factor in (1, 2, 2.5, 5, 10):
+        step = magnitude * factor
+        if step >= raw:
+            break
+    # Run the ticks past the data to the round values either side of it. The
+    # first version clipped to the observed range, so a series topping out at
+    # $489.88 got ticks at $300 and $400 and nothing marking the top.
+    value = math.floor(low / step) * step
+    last = math.ceil(high / step) * step
+    ticks = []
+    while value <= last + step * 0.01:
+        ticks.append(round(value, 6))
+        value += step
+    # A leading tick a whole step below the data wastes a third of the plot.
+    if len(ticks) > 2 and low - ticks[0] >= step:
+        ticks = ticks[1:]
+    return ticks or [low, high]
+
+
+def _axis_money(value: float) -> str:
+    if value >= 1000:
+        return f"${value:,.0f}"
+    return f"${value:,.2f}" if value < 10 else f"${value:,.0f}"
+
+
+def price_chart_svg(closes: dict, *, days: int = 365, width: int = 720,
+                    height: int = 240) -> dict | None:
+    """A price line with a real pair of axes, or None.
 
     Market data, drawn deliberately unlike the finding charts: no thresholds,
     no flags, no severity colour. It answers "what did the market do while this
     was being filed", which is context, not evidence.
+
+    Scaled uniformly rather than stretched. The first version set
+    preserveAspectRatio="none" to fill its box, which distorts every dot and
+    would have skewed the axis text the moment there was any.
     """
     if not closes:
         return None
@@ -219,27 +257,58 @@ def price_chart_svg(closes: dict, *, days: int = 365, width: int = 640,
         return None
     values = [v for _, v in points]
     low, high = min(values), max(values)
-    span = (high - low) or 1.0
-    pad = 18
-    inner = height - pad * 2
-    step = width / (len(values) - 1)
-    coords = [(i * step, pad + inner - ((v - low) / span) * inner)
-              for i, v in enumerate(values)]
+
+    left, right, top, bottom = 62, 14, 16, 30
+    plot_w = width - left - right
+    plot_h = height - top - bottom
+    ticks = _price_ticks(low, high)
+    scale_low, scale_high = min(low, ticks[0]), max(high, ticks[-1])
+    scale = (scale_high - scale_low) or 1.0
+
+    def y_of(value: float) -> float:
+        return top + plot_h - ((value - scale_low) / scale) * plot_h
+
+    step_x = plot_w / (len(values) - 1)
+    coords = [(left + i * step_x, y_of(v)) for i, v in enumerate(values)]
     line = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in coords)
-    area = f"{line} L{coords[-1][0]:.1f} {height} L0 {height} Z"
+    area = f"{line} L{coords[-1][0]:.1f} {top + plot_h:.1f} L{left:.1f} {top + plot_h:.1f} Z"
+
+    grid = "".join(
+        f'<line class="pc-grid" x1="{left}" x2="{width - right}" '
+        f'y1="{y_of(t):.1f}" y2="{y_of(t):.1f}"/>'
+        f'<text class="pc-tick" x="{left - 8}" y="{y_of(t) + 3.5:.1f}" '
+        f'text-anchor="end">{_esc(_axis_money(t))}</text>'
+        for t in ticks)
+
+    marks = max(2, min(5, len(points) // 45))
+    span = len(points) - 1
+    dates = ""
+    for n in range(marks + 1):
+        i = round(span * n / marks)
+        when = points[i][0]
+        anchor = "start" if n == 0 else ("end" if n == marks else "middle")
+        dates += (f'<text class="pc-tick" x="{coords[i][0]:.1f}" '
+                  f'y="{height - 10}" text-anchor="{anchor}">'
+                  f'{when.strftime("%b %Y")}</text>')
+
     change = ((values[-1] - values[0]) / values[0] * 100) if values[0] else 0.0
     tone = "up" if change >= 0 else "down"
-    peak = coords[values.index(high)]
-    trough = coords[values.index(low)]
+    series = ";".join(f"{d.isoformat()},{v:.4f}" for d, v in points)
     return {
         "svg": (
             f'<svg class="pricechart {tone}" viewBox="0 0 {width} {height}" '
-            f'preserveAspectRatio="none" role="img" '
-            f'aria-label="Closing price over the period">'
+            f'role="img" aria-label="Closing price with date and price axes" '
+            f'data-plot="{left},{top},{plot_w},{plot_h}" data-series="{series}">'
+            f"{grid}{dates}"
             f'<path class="pc-area" d="{area}"/>'
             f'<path class="pc-line" d="{line}"/>'
-            f'<circle class="pc-dot" cx="{peak[0]:.1f}" cy="{peak[1]:.1f}" r="2.5"/>'
-            f'<circle class="pc-dot" cx="{trough[0]:.1f}" cy="{trough[1]:.1f}" r="2.5"/>'
+            f'<line class="pc-cross" x1="0" x2="0" y1="{top}" y2="{top + plot_h}" '
+            f'style="display:none"/>'
+            f'<circle class="pc-hit" r="3.5" style="display:none"/>'
+            f'<circle class="pc-end" cx="{coords[-1][0]:.1f}" '
+            f'cy="{coords[-1][1]:.1f}" r="3"/>'
+            f'<rect class="pc-surface" x="{left}" y="{top}" width="{plot_w}" '
+            f'height="{plot_h}" fill="transparent"/>'
             f"</svg>"
         ),
         "first": points[0], "last": points[-1],
