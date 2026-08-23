@@ -27,3 +27,4 @@ out/
 config/authored/
 config/entities_proposed.json
 config/feedback.jsonl
+config/summaries/
