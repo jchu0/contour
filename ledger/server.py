@@ -178,14 +178,26 @@ background:var(--surface);border:1px solid var(--rule)}
 .market-head{display:flex;flex-direction:column;gap:.15rem}
 .market-head h2{font-family:var(--sans);font-size:1.0625rem;font-weight:600;margin:0}
 .market .who{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
-.pricechart{display:block;width:100%;height:9.375rem;overflow:visible}
-.pc-line{fill:none;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.market-plot{position:relative}
+.pricechart{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+.pc-line{fill:none;stroke-width:1.6}
 .pc-area{stroke:none;opacity:.1}
-.pc-dot{stroke:none}
+.pc-end,.pc-hit{stroke:none}
+.pc-grid{stroke:var(--rule);stroke-width:1}
+.pc-tick{font-family:var(--mono);font-size:10.5px;fill:var(--ink-3)}
+.pc-cross{stroke:var(--rule-strong);stroke-width:1;stroke-dasharray:2 3}
 .pricechart.up .pc-line{stroke:var(--pass)}
-.pricechart.up .pc-area,.pricechart.up .pc-dot{fill:var(--pass)}
+.pricechart.up .pc-area,.pricechart.up .pc-end,.pricechart.up .pc-hit{fill:var(--pass)}
 .pricechart.down .pc-line{stroke:var(--high)}
-.pricechart.down .pc-area,.pricechart.down .pc-dot{fill:var(--high)}
+.pricechart.down .pc-area,.pricechart.down .pc-end,.pricechart.down .pc-hit{fill:var(--high)}
+.pc-readout{position:absolute;top:0;transform:translateX(-50%);pointer-events:none;
+display:flex;flex-direction:column;align-items:center;gap:.05rem;
+background:var(--surface);border:1px solid var(--rule-strong);padding:.2rem .5rem}
+/* display:flex beats the hidden attribute, so the empty box showed on load. */
+.pc-readout[hidden]{display:none}
+.pc-readout b{font-family:var(--mono);font-size:.8125rem;font-weight:600;
+font-variant-numeric:tabular-nums}
+.pc-readout small{font-family:var(--mono);font-size:.625rem;color:var(--ink-3)}
 .market-facts{display:flex;flex-wrap:wrap;gap:0 2rem;padding-top:.85rem;
 border-top:1px solid var(--rule)}
 .market-facts span{display:flex;flex-direction:column;gap:.1rem}
@@ -1395,6 +1407,62 @@ CHROME_SCRIPT = """<script>
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') stop();
   });
+
+  // -- price chart: value at the point you are on ------------------------
+  document.querySelectorAll('.pricechart').forEach(function (svg) {
+    var plot = (svg.getAttribute('data-plot') || '').split(',').map(Number);
+    var series = (svg.getAttribute('data-series') || '').split(';').map(function (row) {
+      var parts = row.split(',');
+      return {day: parts[0], value: parseFloat(parts[1])};
+    }).filter(function (p) { return !isNaN(p.value); });
+    if (plot.length !== 4 || series.length < 2) return;
+    var left = plot[0], top = plot[1], plotW = plot[2], plotH = plot[3];
+    var cross = svg.querySelector('.pc-cross');
+    var hit = svg.querySelector('.pc-hit');
+    var readout = svg.parentElement.querySelector('[data-price-readout]');
+    var values = series.map(function (p) { return p.value; });
+    var lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
+    // The axis pads to round ticks, so the drawn scale is wider than the data.
+    // Recomputing it here from min/max would put the dot off the line.
+    var ticks = [...svg.querySelectorAll('.pc-grid')].map(function (g) {
+      return parseFloat(g.getAttribute('y1'));
+    });
+    var scaleTop = ticks.length ? Math.min.apply(null, ticks) : top;
+    var scaleBottom = ticks.length ? Math.max.apply(null, ticks) : top + plotH;
+    var tickText = [...svg.querySelectorAll('.pc-tick')].slice(0, ticks.length)
+      .map(function (t) { return parseFloat(t.textContent.replace(/[$,]/g, '')); });
+    var vTop = tickText.length ? Math.max.apply(null, tickText) : hi;
+    var vBottom = tickText.length ? Math.min.apply(null, tickText) : lo;
+    function yFor(value) {
+      if (vTop === vBottom) return scaleTop;
+      return scaleBottom - ((value - vBottom) / (vTop - vBottom)) * (scaleBottom - scaleTop);
+    }
+    function show(ev) {
+      var box = svg.getBoundingClientRect();
+      var vb = svg.viewBox.baseVal;
+      var x = ((ev.clientX - box.left) / box.width) * vb.width;
+      var ratio = Math.max(0, Math.min(1, (x - left) / plotW));
+      var point = series[Math.round(ratio * (series.length - 1))];
+      if (!point) return;
+      var px = left + (series.indexOf(point) / (series.length - 1)) * plotW;
+      var py = yFor(point.value);
+      cross.setAttribute('x1', px); cross.setAttribute('x2', px);
+      cross.style.display = '';
+      hit.setAttribute('cx', px); hit.setAttribute('cy', py);
+      hit.style.display = '';
+      readout.hidden = false;
+      readout.querySelector('b').textContent = '$' + point.value.toFixed(2);
+      readout.querySelector('small').textContent = point.day;
+      readout.style.left = Math.max(0, Math.min(94, (px / vb.width) * 100)) + '%';
+    }
+    function hide() {
+      cross.style.display = 'none';
+      hit.style.display = 'none';
+      readout.hidden = true;
+    }
+    svg.addEventListener('pointermove', show);
+    svg.addEventListener('pointerleave', hide);
+  });
 })();
 </script>"""
 
@@ -1495,7 +1563,9 @@ def _price_panel(ticker: str) -> str:
     return f"""<section class="market">
 <div class="market-head"><h2>Market context</h2>
 <span class="who">Closing prices · not from a filing · nothing here is a finding</span></div>
-{chart["svg"]}
+<div class="market-plot">{chart["svg"]}
+<div class="pc-readout" data-price-readout hidden>
+<b></b><small></small></div></div>
 <div class="market-facts">
 <span><b>{chart["change"]:+.1f}%</b><small class="{tone}">over the period</small></span>
 <span><b>${last_value:,.2f}</b><small>{esc(last_day.isoformat())}</small></span>
