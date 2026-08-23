@@ -355,7 +355,14 @@ font-size:1.0625rem;font-weight:600;color:var(--accent)}
 .pick{display:flex;align-items:flex-start;gap:.7rem;padding:.6rem .8rem;border-radius:6px;
   border:1px solid var(--rule);cursor:pointer}
 .pick:hover{border-color:var(--rule-strong)}
-.pick.on{border-color:var(--accent);background:var(--accent-soft)}
+/* This was .pick.on, stamped server-side: the row lit up on the
+   pre-selection and then never went dark again when it was unticked. */
+.pick:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.pick.out{cursor:default;background:var(--surface)}
+.pick.out:hover{background:var(--surface)}
+.pick.out b{color:var(--ink-2)}
+.pick-tag{margin-left:auto;font-family:var(--mono);font-size:.625rem;
+letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
 .pick input{margin-top:.2rem;flex:none;accent-color:var(--accent)}
 .pick-body{display:flex;flex-direction:column;gap:.15rem;flex:1;min-width:0}
 .pick-body b{font-size:.875rem;color:var(--ink)}
@@ -2365,7 +2372,7 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
         on = entry.key in chosen
         why = (rec.why or {}).get(entry.key) or entry.spec.rationale
         rows.append(
-            f'<label class="pick{" on" if on else ""}">'
+            f'<label class="pick">'
             f'<input type="checkbox" name="check" value="{esc(entry.key)}"'
             f'{" checked" if on else ""}>'
             f'<span class="pick-body"><b>{esc(entry.spec.title)}</b>'
@@ -2373,8 +2380,14 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
             f'<span class="status {esc(entry.spec.severity)}">{esc(entry.spec.severity)}</span>'
             f"</label>"
         )
+    # These used to be bare list items. A check that cannot run is the same
+    # class of fact as one that can, so it gets the same row and states why.
     ruled_out = "".join(
-        f"<li><b>{esc(e.spec.title)}</b> — {esc(reason)}</li>" for e, reason in excluded
+        f'<div class="pick out"><span class="pick-body">'
+        f"<b>{esc(e.spec.title)}</b>"
+        f'<span class="pick-why">{esc(reason)}</span></span>'
+        f'<span class="pick-tag">unavailable</span></div>'
+        for e, reason in excluded
     )
     # The fallback reason is a fragment ("no Anthropic credentials — ordered by
     # severity instead"); it needs framing to read as a sentence beside the rest.
@@ -2392,8 +2405,8 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
 can run against this filer. {source_line} Change anything below — the roster is
 yours, and nothing is saved until you confirm.</p>
 <div class="picks">{"".join(rows)}</div>
-<details class="roster"><summary>{len(excluded)} ruled out</summary>
-<ul>{ruled_out}</ul></details>
+<details class="roster"><summary>{len(excluded)} cannot run against this filer</summary>
+<div class="picks out">{ruled_out}</div></details>
 <div class="wizard-actions">
 <button type="submit">Add {esc(ticker)} and take a baseline</button>
 <a class="ghost-link" href="/add">Start over</a>
