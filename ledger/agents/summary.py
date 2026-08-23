@@ -14,12 +14,11 @@ any other check. It is an addition to the report, never a dependency of it.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
+from ledger.agents import MODEL, call
 from ledger.report import Report, Status
 
-MODEL = "claude-opus-5"
 MAX_TOKENS = 1600
 
 SYSTEM = """You write a short executive summary of an automated review of a public \
@@ -95,52 +94,10 @@ def findings_brief(report: Report) -> str:
 def executive_summary(report: Report, *, model: str = MODEL) -> Summary:
     """Narrate the findings. Never a dependency — a failure here is reported,
     not raised, and the report stands without it."""
-    try:
-        import anthropic
-    except ImportError:
-        return Summary(
-            "", available=False,
-            reason="the anthropic package is not installed — run: pip install anthropic",
-        )
-
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
-        return Summary(
-            "", available=False,
-            reason="no Anthropic credentials found. Set ANTHROPIC_API_KEY, or run "
-                   "`ant auth login`. Every finding in this report was computed "
-                   "without a model and stands on its own; this only adds narration.",
-        )
-
     if not report.findings and not report.unavailable:
-        return Summary(
-            "", available=False,
-            reason="nothing to summarise — no findings and nothing withheld",
-        )
-
-    client = anthropic.Anthropic()
-    try:
-        response = client.messages.create(
-            model=model,
-            max_tokens=MAX_TOKENS,
-            system=SYSTEM,
-            thinking={"type": "adaptive"},
-            messages=[{"role": "user", "content": findings_brief(report)}],
-        )
-    except anthropic.NotFoundError as exc:            # bad model id
-        return Summary("", available=False, reason=f"model not found: {exc}")
-    except anthropic.RateLimitError:
-        return Summary("", available=False, reason="rate limited — try again shortly")
-    except anthropic.APIStatusError as exc:
-        return Summary("", available=False, reason=f"API error {exc.status_code}: {exc.message}")
-    except anthropic.APIConnectionError:
-        return Summary("", available=False, reason="could not reach the Anthropic API")
-
-    if response.stop_reason == "refusal":
-        return Summary("", available=False, reason="the request was declined by the model")
-
-    text = "\n".join(
-        block.text for block in response.content if block.type == "text"
-    ).strip()
-    if not text:
-        return Summary("", available=False, reason="the model returned no text")
+        return Summary("", available=False,
+                       reason="nothing to summarise — no findings and nothing withheld")
+    text, reason = call(SYSTEM, findings_brief(report), model=model, max_tokens=MAX_TOKENS)
+    if reason:
+        return Summary("", available=False, reason=reason)
     return Summary(text, model=model)

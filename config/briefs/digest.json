@@ -1,0 +1,30 @@
+{
+  "headline": "All three companies' headline revenue statements matched what was filed, and in all three the movement underneath the headline was concentrated in one or two components rather than spread across the business.",
+  "lines": [
+    {
+      "ticker": "TSLA",
+      "note": "Revenue fell 2.9% while operating income fell 38% and interest income supplied 32% of pre-tax income, with a $0.77B drop in regulatory credits carrying 26.9% of the top-line movement and growth in energy and services offsetting most of it."
+    },
+    {
+      "ticker": "NVDA",
+      "note": "Nothing crossed the financial-condition threshold and the $81.6B record revenue claim held across 63 periods, but two other record statements were qualified as same-quarter records only, networking carried 21.5% of the movement on a 10.0% share, and R&D fell to 8.6% of revenues."
+    },
+    {
+      "ticker": "RIVN",
+      "note": "Software and services grew $1.07B and accounted for 258% of the total revenue movement while new electric vehicles fell $522M and regulatory credits fell $136M, in a year 76 of 91 risk factors were modified and two campaigns fourteen months apart described the same turn signal defect."
+    }
+  ],
+  "gaps": [
+    "Most management claims were not testable against filed figures across the set \u2014 8 of 10 for Tesla, 7 of 10 for NVIDIA, 9 of 10 for Rivian \u2014 so only revenue and, for Tesla, operating income statements were verified.",
+    "No segment-level or product-level profitability was available for any of the three; every composition finding covers revenue only.",
+    "Recent 8-K and 10-Q contents listed in the filing feeds were not examined beyond the earnings release exhibits, including NVIDIA's 2026-08-17 8-K reporting a material definitive agreement and a direct financial obligation.",
+    "Corroborating material outside the filings exists only for Tesla and NVIDIA; Rivian has no press, aggregator or community items at all, so nothing independent could agree or disagree with its filings.",
+    "Where corroborating headlines do exist \u2014 a China vehicle recall and a discontinued solar product for Tesla, price increases and a license payment for NVIDIA \u2014 no filing in the material confirms them, and Class B-F material cannot establish a fact on its own.",
+    "Rivian's risk-factor extraction captured document-header text as several additions, so its add and remove counts overstate the substantive changes that could be read.",
+    "Recall detail was limited to the 2024-2026 model-year window: 6 of 16 campaigns for Tesla and 6 of 13 for Rivian, with no vehicle counts in the material for any campaign.",
+    "NVIDIA's safety-record check does not apply \u2014 it is not a vehicle manufacturer \u2014 so its absence there is not a gap."
+  ],
+  "model": "claude-opus-5",
+  "written": "2026-08-23",
+  "provenance": "simulated"
+}

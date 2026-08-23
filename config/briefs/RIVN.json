@@ -1,0 +1,116 @@
+{
+  "ticker": "RIVN",
+  "model": "claude-opus-5",
+  "written": "2026-08-23",
+  "provenance": "simulated",
+  "brief": {
+    "headline": "Rivian's revenue movement was carried entirely by software and services, which grew $1.07B and accounted for 258% of the total change while new electric vehicles fell $522M and regulatory credits fell $136M \u2014 a shift the rewritten risk factors and the recall record both touch.",
+    "threads": [
+      {
+        "title": "One component carried more than the whole movement",
+        "reading": "Software and services grew from $476M to $1.55B, an increase of $1.07B, which is 257.8% of the total revenue movement while the line is 9.6% of revenue \u2014 26.9x its weight. It exceeded the whole movement because two other lines pulled the other way: new electric vehicles fell $522M and regulatory credits fell $136M. The reported total moved up; the vehicle line did not.",
+        "supporting": [
+          "The quarterly earnings release statement of consolidated revenue of $1.658 billion for the period ended 2026-06-30 matched the figure reported to the SEC exactly, a 0.00% difference (Class B release, tested against Class A filings by the Management claims check).",
+          "The financial condition check ran and nothing crossed a threshold, so no margin or earnings-composition finding was raised (Class A, Financial condition check).",
+          "The restatements check ran and nothing crossed a threshold, so the comparison base for prior periods was not revised (Class A, Restatements check)."
+        ],
+        "against": [
+          "New electric vehicle revenue fell $522M over the annual period (Class A, Revenue composition check, 10-K disaggregation of revenue, R49).",
+          "Regulatory credits fell $136M in the same period (Class A, Revenue composition check, R49).",
+          "A line at 9.6% of revenue accounted for 257.8% of the total movement, 26.9x its weight, so the direction of the total rests on one component (Class A, Revenue composition check, R49)."
+        ],
+        "sources": [
+          {
+            "label": "10-K schedule of disaggregation of revenue (Details), filed 2026-02-12",
+            "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417826000008/R49.htm",
+            "klass": "A"
+          },
+          {
+            "label": "Company earnings release (8-K EX-99), 2026-07-30",
+            "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417826000053/ex-9912q26rivianearningspr.htm",
+            "klass": "B"
+          }
+        ]
+      },
+      {
+        "title": "The risk section was rewritten around the same shift",
+        "reading": "Of 91 risk factors, 9 were added, 7 removed, 76 modified and 6 left unchanged. The removals and additions track the revenue shift: a removed factor said the automotive market is highly competitive, and an added one says the automotive and value added software and services markets in which the company operates are highly competitive. A tariff factor moved from a risk that could adversely affect the business to one that has been and may continue to. Other removals have no visible successor in this material.",
+        "supporting": [
+          "The competition risk was not deleted but broadened \u2014 the added factor covers software and services alongside automotive, matching where the revenue movement came from (Class A, Filing language check, 10-K filed 2026-02-12).",
+          "The tariff risk was restated in stronger terms rather than dropped: from could be adversely affected to has been and may continue to be adversely affected (Class A, Filing language check).",
+          "Additions include a new factor on dependence on vendors and suppliers necessary for production of products and services (Class A, Filing language check)."
+        ],
+        "against": [
+          "Only 6 of 91 risk factors were left unchanged; 76 were modified, so nearly the whole section was reworked in one year (Class A, Filing language check).",
+          "A removed factor covered risks associated with the joint venture with the Volkswagen Group, and no successor appears in the material surfaced here (Class A, Filing language check, 2024 10-K text).",
+          "A removed factor covered expectations of continuing significant cost of revenues, operating expenses and capital expenditures and the risk of underestimating or not effectively managing them (Class A, Filing language check, 2024 10-K text).",
+          "The demand risk factors were substantially rewritten at 23% and 9% overlap with their prior text, so year-over-year comparison of that language is limited (Class A, Filing language check)."
+        ],
+        "sources": [
+          {
+            "label": "10-K risk factors, filed 2026-02-12",
+            "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417826000008/rivn-20251231.htm",
+            "klass": "A"
+          },
+          {
+            "label": "Prior 10-K risk factors, filed 2025-02-24",
+            "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417825000007/rivn-20241231.htm",
+            "klass": "A"
+          }
+        ]
+      },
+      {
+        "title": "Software in the revenue line, software in the recall line",
+        "reading": "Six campaigns fall in the 2024-2026 window out of 13 on record. Two of them describe the same defect: one or both front turn signals may fail to illuminate and flash, failing to comply with a federal standard \u2014 campaign 25V387000 on 2025 R1S and R1T vehicles in June 2025, and campaign 26V508000 on 2025-2026 R1S and R1T vehicles in August 2026, fourteen months later. A third covers Hands-Free Highway Assist software that may fail to correctly identify a lead vehicle, in the same period the software and services line became the largest contributor to the revenue movement.",
+        "supporting": [
+          "The ADAS campaign identifies a specific software version boundary, prior to 2025.18.30, indicating a scoped and remediable defect (Class A, NHTSA campaign 25V585000).",
+          "A Federal Register notice dated 2026-07-06 records a grant of a Rivian petition for a decision of inconsequential noncompliance (Class A, Federal Register).",
+          "The 10-K added a risk factor on dependence on vendors and suppliers necessary for production, disclosing the supply dependency that several campaigns touch (Class A, Filing language check)."
+        ],
+        "against": [
+          "Two separate campaigns fourteen months apart describe the same front turn signal failure and the same federal-standard noncompliance, with overlapping model years (Class A, NHTSA campaigns 25V387000 and 26V508000).",
+          "Two further campaigns concern critical fasteners \u2014 second-row seat belt retractor bolts that may be improperly tightened, and a toe link that may have been reassembled incorrectly during prior service (Class A, NHTSA campaigns 26V009000 and 26V003000).",
+          "A campaign covers an improperly grounded connection in the high voltage distribution box that may cause a loss of drive power (Class A, NHTSA campaign 25V537000).",
+          "The ADAS software recall sits in the same period in which software and services carried 257.8% of the revenue movement (Class A, NHTSA campaign 25V585000 with the Revenue composition check)."
+        ],
+        "sources": [
+          {
+            "label": "NHTSA recall 26V508000, front turn signals, 2026-08-06",
+            "url": "https://www.nhtsa.gov/recalls?nhtsaId=26V508000",
+            "klass": "A"
+          },
+          {
+            "label": "NHTSA recall 25V387000, front turn signals, 2025-06-11",
+            "url": "https://www.nhtsa.gov/recalls?nhtsaId=25V387000",
+            "klass": "A"
+          },
+          {
+            "label": "NHTSA recall 25V585000, Hands-Free Highway Assist software, 2025-09-08",
+            "url": "https://www.nhtsa.gov/recalls?nhtsaId=25V585000",
+            "klass": "A"
+          },
+          {
+            "label": "NHTSA recall 26V009000, seat belt retractor fasteners, 2026-01-15",
+            "url": "https://www.nhtsa.gov/recalls?nhtsaId=26V009000",
+            "klass": "A"
+          },
+          {
+            "label": "Federal Register: grant of petition for decision of inconsequential noncompliance, 2026-07-06",
+            "url": "https://www.federalregister.gov/documents/2026/07/06/2026-13544/rivian-automotive-llc-grant-of-petition-for-decision-of-inconsequential-noncompliance",
+            "klass": "A"
+          }
+        ]
+      }
+    ],
+    "corroboration": "There is almost no corroborating material here: no news, aggregator or community items at all, only Federal Register notices and the SEC filing feed, both of which are primary records rather than outside commentary. That means nothing independent either agrees or disagrees with the filings on this company, and the two Federal Register notices \u2014 a 2023 receipt and a 2026 grant of petitions for decisions of inconsequential noncompliance \u2014 speak only to the regulator's handling of specific petitions, not to anything in the financial statements.",
+    "not_checked": [
+      "The financial condition check crossed no threshold, so no operating income, margin or earnings-composition detail was surfaced for this company.",
+      "9 of 10 management claims from the earnings release were not testable against filed figures; only the consolidated revenue statement could be compared.",
+      "Several entries flagged as added risk factors captured only the company's name from the document header, so the count of 9 additions overstates the substantive changes that could be read.",
+      "13 recall campaigns are on record but only six fall in the 2024-2026 model-year window; the rest were not detailed, and no campaign's vehicle count is in the material.",
+      "Whether the two front turn signal campaigns cover the same vehicles or distinct populations is not established by the material.",
+      "No outside corroborating material exists for this company in the sources declared, so nothing could be cross-checked against press or third-party reporting.",
+      "The contents of the 10-Q filed 2026-07-30 were not examined beyond the earnings release exhibit."
+    ]
+  }
+}

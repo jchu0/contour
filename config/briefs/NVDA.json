@@ -1,0 +1,97 @@
+{
+  "ticker": "NVDA",
+  "model": "claude-opus-5",
+  "written": "2026-08-23",
+  "provenance": "simulated",
+  "brief": {
+    "headline": "NVIDIA's filings cleared the financial-condition and supply-language checks with no threshold crossed, while networking carried 21.5% of the revenue movement on a 10.0% share, research and development fell to 8.6% of revenues, and a new counterparty-risk factor appeared alongside an 8-K creating a direct financial obligation.",
+    "threads": [
+      {
+        "title": "What carried the movement",
+        "reading": "Networking grew $18.39B, from $12.99B to $31.38B, carrying 21.5% of the total revenue movement while making up 10.0% of the prior-period base \u2014 2.2x its weight. In the same annual filing the risk factors gained exactly one addition: commercial arrangements expose the company to counterparty risks. The filing feed shows an 8-K dated 2026-08-17 with Item 1.01, entry into a material definitive agreement, and Item 2.03, creation of a direct financial obligation; the material does not say what that agreement is, and does not connect it to the risk factor.",
+        "supporting": [
+          "The financial condition check ran and nothing crossed a threshold, so no margin or earnings-composition finding was raised (Class A, Financial condition check).",
+          "Networking's growth is a reported segment line in the 10-K schedule of revenue by market, not a derived estimate (Class A, Revenue composition check, R85).",
+          "The record-revenue statement of $81.6 billion was confirmed as the highest across 63 prior reported periods (Class A/B, Management claims check)."
+        ],
+        "against": [
+          "A component at 10.0% of the base accounted for 21.5% of the movement, 2.2x its weight, so the reported growth is less evenly distributed than the total suggests (Class A, Revenue composition check, R85).",
+          "The one risk factor added in the year concerns counterparty exposure from commercial arrangements (Class A, Filing language check, 10-K filed 2026-02-25).",
+          "An 8-K filed 2026-08-17 reports both a material definitive agreement and the creation of a direct financial obligation; its contents are not in this material (Class A, SEC filing feed)."
+        ],
+        "sources": [
+          {
+            "label": "10-K segment information, schedule of revenue by market (Details), filed 2026-02-25",
+            "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/R85.htm",
+            "klass": "A"
+          },
+          {
+            "label": "10-K risk factors, filed 2026-02-25",
+            "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+            "klass": "A"
+          },
+          {
+            "label": "8-K filed 2026-08-17, Items 1.01 and 2.03",
+            "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000069/0001045810-26-000069-index.htm",
+            "klass": "A"
+          }
+        ]
+      },
+      {
+        "title": "How the records are framed",
+        "reading": "Three record statements from the earnings release were tested. One held outright: revenue for the quarter ended 2026-04-26 was the highest across 63 prior reported periods. Two came back qualified \u2014 records only within the same fiscal quarter, a comparison set of 17 periods rather than all reporting history. One of the qualified quotes cites a first-quarter figure of $75.2 billion where the period checked reported $81.61 billion; the material does not reconcile the two.",
+        "supporting": [
+          "Revenue of $81.61B for the quarter ended 2026-04-26 exceeded the prior best of $57.01B (quarter ended 2025-10-26) across all 63 prior periods on file, so the record claim was marked supported (Class A/B, Management claims check).",
+          "The release's own text states the comparisons it is making \u2014 up 20% from the previous quarter and up 85% from a year ago \u2014 rather than leaving the basis implicit (Class B, earnings release quoted in the Management claims check)."
+        ],
+        "against": [
+          "Two of the three tested record statements were qualified: a record only within the same fiscal quarter, against 17 same-quarter periods and a prior best of $44.06B, not across all periods (Class A/B, Management claims check).",
+          "A quoted record statement cites first-quarter revenue of $75.2 billion while the figure reported to the SEC for the quarter checked was $81.61 billion; the material does not explain the difference (Class B release, Management claims check).",
+          "7 of 10 management claims were not testable against filed figures (Class A/B, Management claims check)."
+        ],
+        "sources": [
+          {
+            "label": "Company earnings release (8-K EX-99), 2026-05-20",
+            "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000051/q1fy27pr.htm",
+            "klass": "B"
+          }
+        ]
+      },
+      {
+        "title": "Spend ratio and a stable filing",
+        "reading": "Research and development expense fell from 9.9% to 8.6% of revenues, a 13.4% move in the ratio against a rule that flags anything above 8% in either direction. The material gives no absolute R&D figure, so whether spend rose or fell cannot be read from this \u2014 only the share. Around that, the filing looks stable: no risk factors removed, the single-source supply language crossed no threshold, and the only closed-period revisions on file date to 2016.",
+        "supporting": [
+          "Zero risk factors were removed year over year; of 24, one was added, 16 modified and 7 left unchanged (Class A, Filing language check).",
+          "The single-source supply language check ran and nothing crossed a threshold (Class A, Single-source supply language check).",
+          "The only restatements found are from 2016, both upward and small: net income for the period ending 2016-07-31 raised from $253M to $261M (+3.2%) and for 2016-05-01 from $196M to $208M (+6.1%), with 484 figures on file and 0 new to the ledger (Class A, Restatements check, SEC XBRL company facts)."
+        ],
+        "against": [
+          "R&D as a share of revenues fell 13.4%, from 9.9% for the year ended 2025-01-26 to 8.6% for the year ended 2026-01-25, past the 8% flag (Class A, R&D share check).",
+          "16 of 24 risk factors were modified in the year, so most of the section was reworded even though none was deleted (Class A, Filing language check).",
+          "No absolute research and development figure is present in the material, so the ratio move cannot be separated into a numerator effect and a denominator effect (Class A, R&D share check)."
+        ],
+        "sources": [
+          {
+            "label": "10-K, R&D expense as a share of revenues, filed 2026-02-25",
+            "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/nvda-20260125.htm",
+            "klass": "A"
+          },
+          {
+            "label": "SEC XBRL company facts, CIK 1045810",
+            "url": "https://data.sec.gov/api/xbrl/companyfacts/CIK0001045810.json",
+            "klass": "A"
+          }
+        ]
+      }
+    ],
+    "corroboration": "The Class F material is press and vendor self-publication \u2014 headlines on customer price increases above 15% and on a multi-billion-dollar license to an AI startup, plus a company blog post, a company social-media post and a third-party code repository \u2014 and it points at pricing and at commercial commitments in the same period the filing added a counterparty-risk factor and an 8-K reported a direct financial obligation. None of it can establish that any of those are related, or settle any amount; the 8-K's own contents are the only thing that would.",
+    "not_checked": [
+      "7 of 10 management claims from the earnings release were not testable against filed figures.",
+      "The contents of the 8-K filed 2026-08-17 (material definitive agreement, direct financial obligation) are not in the material, so the obligation it creates could not be sized or characterized.",
+      "No absolute research and development expense figure was available, only its share of revenues.",
+      "The financial condition and single-source supply language checks crossed no threshold, so no underlying detail was surfaced for either.",
+      "The Class F reports on pricing and on a license payment have no corresponding filing in this material to check them against.",
+      "The $75.2 billion figure quoted in one release statement could not be tied to a reported period in the material."
+    ]
+  }
+}
