@@ -10,7 +10,8 @@ put the checks that could not run at the top of the page instead of the bottom.
 
 from __future__ import annotations
 
-from datetime import date
+import json
+from datetime import date, datetime as _dt
 import os
 import threading
 import time
@@ -854,19 +855,11 @@ def _sidebar(current: str = "") -> str:
         blocks.append(f'<div class="nav-group"><span class="nav-group-label">{esc(label)}</span>'
                       f'{"".join(items)}</div>')
 
-    toggle = (f'<button class="nav-toggle" type="button" data-nav-toggle '
-              f'aria-label="Collapse or expand the sidebar">'
-              f'<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-collapse">'
-              f'<path d="{CHEVRON_L}"/></svg>'
-              f'<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-expand">'
-              f'<path d="{CHEVRON_R}"/></svg>'
-              f'<span class="nav-label">Collapse</span></button>')
-
-    # The toggle sits with the brand rather than at the foot: it acts on the
-    # rail, and the reader looks for it where the rail begins.
-    return (f'<aside class="sidebar"><div class="brand-row">'
+    # The toggle lives in the top bar, not in the rail. Inside the rail it had
+    # nowhere to go when the rail narrowed, and ended up on the brand mark.
+    return (f'<aside class="sidebar">'
             f'<a class="brand" href="/"><span class="brand-mark">CT</span>'
-            f'<span class="brand-name nav-label">Contour</span></a>{toggle}</div>'
+            f'<span class="brand-name nav-label">Contour</span></a>'
             f'<nav class="nav-list">{"".join(blocks)}</nav>'
             f'<div class="sidebar-foot">{_account()}</div></aside>')
 
@@ -1028,19 +1021,24 @@ def _tour(current: str) -> str:
             f'Tour this page</button>{payload}')
 
 
-def _topbar(current: str, title: str) -> str:
+def _topbar(current: str, title: str, tour_key: str = "") -> str:
     """Where you are, how to get back, and the controls that follow you around."""
     name = next((n for href, n, _, _ in NAV_ITEMS if href == current), "")
     group = next((g for href, _, _, g in NAV_ITEMS if href == current), "")
     crumbs = (f'<span class="crumb-group">{esc(group)}</span>'
               f'<span class="crumb-sep">/</span><b>{esc(name)}</b>'
               if name else f"<b>{esc(title)}</b>")
+    tour_key = tour_key or current
     return f"""<div class="topbar">
+<button class="bar-button rail" type="button" data-nav-toggle
+        aria-label="Collapse or expand the sidebar">
+<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.6" y="3.6" width="14.8" height="12.8"
+rx="1.4"/><path d="M8 3.6v12.8"/></svg></button>
 <button class="bar-button back" type="button" data-back
         aria-label="Back to the previous page">
 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4 6 10l6 6"/></svg>Back</button>
 <div class="crumbs-bar">{crumbs}</div>
-<div class="bar-right">{_tour(current)}
+<div class="bar-right">{_tour(tour_key)}
 <button class="bar-button theme" type="button" data-theme-toggle
         aria-label="Switch between light and dark">
 <svg viewBox="0 0 20 20" aria-hidden="true" class="ico-sun"><circle cx="10" cy="10" r="3.6"/>
@@ -1230,6 +1228,12 @@ CHROME_SCRIPT = """<script>
     frame();
     show(0);
   }
+  // A trigger that does nothing is worse than no trigger: if this page's steps
+  // all point at parts it did not render, take the control away.
+  collect();
+  if (!steps.length) {
+    document.querySelectorAll('[data-tour-start]').forEach(function (b) { b.remove(); });
+  }
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') stop();
   });
@@ -1255,14 +1259,14 @@ NAV_SCRIPT = """<script>
 </script>"""
 
 
-def _page(title: str, body: str, current: str = "") -> bytes:
+def _page(title: str, body: str, current: str = "", tour: str = "") -> bytes:
     collapsed = current == "/scan"
     return f"""<!doctype html><html lang="en" data-nav="{'closed' if collapsed else 'open'}">
 <head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title>{FONTS}
 <style>{CSS}{_EXTRA_CSS}</style></head><body>
-<div class="app">{_sidebar(current)}<main class="main">{_topbar(current, title.split(" — ")[0])}
+<div class="app">{_sidebar(current)}<main class="main">{_topbar(current, title.split(" — ")[0], tour or current)}
 <div class="shell">{body}</div></main></div>
 {HELP_BUBBLE}{_VEIL}{NAV_SCRIPT}{CHROME_SCRIPT}</body></html>""".encode()
 
@@ -2759,7 +2763,7 @@ def _wizard_shell(step: int, title: str, body: str, sub: str = "") -> bytes:
 {f'<p class="lede">{sub}</p>' if sub else ""}
 </header>
 <div class="crumbs">{crumbs}</div>
-{body}""", current="/add")
+{body}""", current="/add", tour="/add/review" if step else "/add")
 
 
 def scan_page() -> bytes:
@@ -3263,7 +3267,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(303)
             self.send_header("Location", redirect.location)
             self.end_headers()
-            return
+            return  # noqa: TRY300 — a redirect is a normal outcome here
         except Exception:  # noqa: BLE001 — never return a bare 500 to the browser
             payload = _page("Error", f'<div class="error"><p>{esc(traceback.format_exc()[-600:])}</p></div>')
         self._respond(payload)
