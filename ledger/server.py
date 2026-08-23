@@ -481,19 +481,110 @@ display:flex;flex-direction:column;gap:.55rem}
 .error p{margin:0;color:var(--ink)}
 .back{font-family:var(--mono);font-size:.75rem}
 .nav{display:flex;gap:1.25rem;font-family:var(--mono);font-size:.75rem}
-.srcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:1px;
-background:var(--rule);border:1px solid var(--rule)}
-.src{background:var(--surface);padding:1rem 1.15rem;display:flex;flex-direction:column;gap:.45rem}
-.src .top{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
-.src h3{font-family:var(--sans);font-size:1rem;margin:0;font-weight:600}
-.klass{font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.1em;
-padding:.15rem .45rem;background:var(--accent-soft);color:var(--accent)}
+.health{display:flex;flex-wrap:wrap;gap:0 2.25rem;padding-top:.9rem;
+border-top:2px solid var(--ink)}
+.health-fact{display:flex;flex-direction:column;gap:.15rem;padding:.3rem 0}
+.health-fact span{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+.health-fact b{font-family:var(--mono);font-size:1.0625rem;font-weight:500;
+font-variant-numeric:tabular-nums}
+.health-fact.pass b{color:var(--pass)}
+.health-fact.warn b{color:var(--med)}
+.head-note{margin-left:auto;font-family:var(--mono);font-size:.75rem;color:var(--ink-3)}
+.src-tools{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.src-search{display:flex;align-items:center;gap:.5rem;flex:0 1 20rem;min-width:12rem;
+padding:0 .6rem;height:2.5rem;background:var(--surface);border:1px solid var(--rule-strong)}
+.src-search svg{width:.875rem;height:.875rem;flex:none;fill:none;
+stroke:var(--ink-3);stroke-width:1.6}
+.src-search input{flex:1 1 auto;min-width:0;border:0;background:none;outline:0;
+font-family:var(--mono);font-size:.8125rem;color:var(--ink)}
+.segs{display:flex;gap:.4rem;margin-left:auto}
+.seg{display:inline-flex;align-items:center;gap:.4rem;height:2.5rem;padding:0 .85rem;
+border:1px solid var(--rule);background:var(--surface);color:var(--ink-2);
+font-family:var(--mono);font-size:.78125rem;cursor:pointer}
+.seg.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+.seg .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.seg .dot.live{background:var(--pass)}
+.seg .dot.blocked{background:var(--med)}
+.seg .dot.off{background:var(--rule-strong)}
+.src-tools select{font-family:var(--mono);font-size:.78125rem;height:2.5rem;
+padding:0 .6rem;background:var(--surface);color:var(--ink);
+border:1px solid var(--rule-strong)}
+.srclist{border:1px solid var(--rule);background:var(--surface);
+display:flex;flex-direction:column}
+.src-row{display:grid;grid-template-columns:8rem minmax(0,1fr) 14.75rem 12.5rem 9.25rem;
+gap:0 1.25rem;padding:.9rem 1.25rem;align-items:start;
+border-bottom:1px solid var(--rule)}
+.src-row:last-child{border-bottom:0}
+.src-row[hidden]{display:none}
+.src-state{display:flex;flex-direction:column;gap:.3rem;padding-top:.1rem}
+.pill{align-self:flex-start;font-family:var(--mono);font-size:.625rem;font-weight:600;
+letter-spacing:.11em;text-transform:uppercase;padding:.2rem .5rem}
+.pill.live{background:var(--pass-soft);color:var(--pass)}
+.pill.blocked{background:var(--med-soft);color:var(--med)}
+.pill.off{background:var(--surface-2);color:var(--ink-2)}
+.src-row .sub{font-family:var(--mono);font-size:.625rem;color:var(--ink-3);
+line-height:1.35}
+.src-row .sub.warn{color:var(--med)}
+.src-id{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.src-id h3{font-family:var(--sans);font-size:.9375rem;font-weight:600;margin:0;
+line-height:1.3}
+.src-id p{margin:0;font-size:.8125rem;color:var(--ink-2);line-height:1.45}
+.src-id .url{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.src-klass{display:flex;gap:.6rem;align-items:flex-start}
+.klass{display:grid;place-items:center;width:1.5rem;height:1.5rem;flex:none;
+font-family:var(--mono);font-size:.75rem;font-weight:600;
+background:var(--accent-soft);color:var(--accent)}
 .klass.low{background:var(--surface-2);color:var(--ink-3)}
-.src p{margin:0;font-size:.875rem;color:var(--ink-2)}
-.src .url{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
-word-break:break-all;line-height:1.45}
-.src .cover{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
-.src .cover.warn{color:var(--med)}
+.src-klass-body{display:flex;flex-direction:column;gap:.1rem;line-height:1.3}
+.src-klass-body b{font-family:var(--sans);font-size:.8125rem;font-weight:600}
+.src-keyed{display:flex;flex-direction:column;gap:.25rem;line-height:1.3}
+.keyed{align-self:flex-start;font-family:var(--mono);font-size:.625rem;font-weight:600;
+letter-spacing:.08em;padding:.125rem .4rem;background:var(--surface-2);color:var(--ink-2)}
+.src-file{display:flex;flex-direction:column;gap:.2rem;align-items:flex-end;
+text-align:right}
+.pager{display:flex;align-items:center;gap:.9rem;padding:.7rem 1.25rem;
+border:1px solid var(--rule);border-top:0}
+.pager.compact{border:0;border-top:1px solid var(--rule);padding:.7rem 0}
+.pager .sub{font-family:var(--mono);font-size:.71875rem;color:var(--ink-3);
+font-variant-numeric:tabular-nums}
+.pg-right{margin-left:auto;display:flex;align-items:center;gap:.65rem}
+.pg-right label{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);
+font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pg-right select{font-family:var(--mono);font-size:.78125rem;height:2.125rem;
+padding:0 .5rem;background:var(--surface);color:var(--ink);
+border:1px solid var(--rule-strong);text-transform:none;letter-spacing:0}
+.pg-arrows{display:flex;gap:.4rem}
+.pg-arrow{display:grid;place-items:center;width:2.125rem;height:2.125rem;
+border:1px solid var(--rule);background:var(--surface)}
+.pg-arrow svg{width:.8125rem;height:.8125rem;fill:none;stroke:var(--rule-strong);
+stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.maptable th b{display:block;font-family:var(--sans);font-size:.8125rem;font-weight:600}
+.maptable th .sub{font-family:var(--mono);font-size:.625rem;color:var(--ink-3);
+text-transform:none;letter-spacing:0;font-weight:400}
+.srcband{display:grid;grid-template-columns:repeat(auto-fit,minmax(24rem,1fr));gap:2.5rem;
+align-items:start}
+.fieldset{display:flex;flex-direction:column;gap:.6rem;padding-bottom:1.1rem;
+border-bottom:1px solid var(--rule)}
+.fieldset:last-of-type{border-bottom:0}
+.fieldset>.sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+line-height:1.5}
+.fieldset>.sub code{font-family:var(--mono);font-size:.6875rem;color:var(--ink-2)}
+.fields{display:grid;grid-template-columns:minmax(0,1fr);gap:.75rem}
+.fields.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rows{display:flex;flex-direction:column;gap:.55rem}
+.rows .field{display:grid;grid-template-columns:11.5rem minmax(0,1fr);
+align-items:center;gap:1rem}
+.field{display:flex;flex-direction:column;gap:.3rem}
+.field label{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+/* input[type=text] carries flex:1 1 9rem for the scan form's row. In this
+   column that basis is read as a height, so every box grew to 144px. */
+.field input,.field select,.field textarea{flex:none}
+.field .req{color:var(--high);padding-left:.15rem}
+.add-actions{display:flex;padding-top:.4rem}
 .presets{display:flex;flex-wrap:wrap;gap:.5rem}
 .preset{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--rule);
 background:var(--surface);padding:.35rem .4rem .35rem .6rem;font-family:var(--mono);
@@ -541,15 +632,11 @@ border:1px solid var(--rule);background:var(--surface);font-size:.875rem;color:v
 .delta .new{color:var(--med)}
 .delta .gone{color:var(--pass)}
 .delta .quiet{color:var(--ink-3);font-family:var(--mono);font-size:.75rem}
-form.add{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.9rem;
-padding-top:1.1rem;border-top:2px solid var(--ink)}
-form.add label{display:flex;flex-direction:column;gap:.3rem;font-family:var(--mono);
-font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+form.add{display:flex;flex-direction:column;gap:1.1rem}
 form.add input,form.add select,form.add textarea{font-family:var(--mono);font-size:.8125rem;
 padding:.55rem .6rem;background:var(--surface);color:var(--ink);
 border:1px solid var(--rule-strong);text-transform:none;width:100%}
 form.add textarea{min-height:5rem;resize:vertical}
-form.add .wide{grid-column:1/-1}
 .flash{padding:.9rem 1.1rem;border-left:3px solid var(--pass);background:var(--pass-soft);
 font-size:.9375rem}
 .flash.bad{border-left-color:var(--high);background:var(--high-soft)}
@@ -1366,24 +1453,155 @@ _FIELDS = [
     ("match", "Entity-gate field", "text", "title", False),
 ]
 
+# The declare form groups these by purpose rather than by declaration order, so
+# it needs to reach a field by name.
+_FIELD_BY_KEY = {key: rest for key, *rest in _FIELDS}
 
-def _source_card(source: CustomSource) -> str:
-    low = source.klass.letter not in ("A", "B")
-    flags = []
+
+
+# Like the compare picker, the list is correct without this: every row is in
+# the page and readable. Filtering is a convenience for a long sources file.
+SOURCES_SCRIPT = """<script>
+(function(){
+  var list = document.getElementById('srclist');
+  if (!list) return;
+  var search = document.getElementById('src-filter');
+  var klass = document.getElementById('src-class');
+  var segs = document.querySelectorAll('.src-tools .seg');
+  var state = 'all';
+  function apply(){
+    var term = search ? search.value.trim().toLowerCase() : '';
+    var want = klass ? klass.value : 'all';
+    var shown = 0;
+    list.querySelectorAll('.src-row').forEach(function(row){
+      var hit = (!term || row.textContent.toLowerCase().indexOf(term) !== -1)
+        && (state === 'all' || row.getAttribute('data-state') === state)
+        && (want === 'all' || row.getAttribute('data-klass') === want);
+      row.hidden = !hit;
+      if (hit) shown++;
+    });
+    var pager = list.parentElement.querySelector('.pager .sub');
+    if (pager) {
+      pager.textContent = 'Showing 1\u2013' + shown + ' of '
+        + list.querySelectorAll('.src-row').length;
+    }
+  }
+  segs.forEach(function(seg){
+    seg.addEventListener('click', function(){
+      segs.forEach(function(o){ o.classList.remove('on'); });
+      seg.classList.add('on');
+      state = seg.getAttribute('data-filter');
+      apply();
+    });
+  });
+  if (search) search.addEventListener('input', apply);
+  if (klass) klass.addEventListener('change', apply);
+})();
+</script>"""
+
+def _source_state(source: CustomSource) -> tuple[str, str, list[str]]:
+    """Live, Blocked or Off — and never two of them at once.
+
+    These used to be one string ("disabled · needs USPTO_API_KEY"), which made a
+    source switched off on purpose look identical to one Contour expects to run
+    and cannot. They are different situations: a deliberate off-switch is a
+    choice, a missing key is a gap. Once a source is off the key stops mattering,
+    so `disabled` wins and the key note is demoted rather than dropped.
+    """
+    key_note = ("needs " + ", ".join(source.missing_env)) if source.missing_env else ""
     if not source.enabled:
-        flags.append("disabled")
+        notes = ["disabled in TOML"]
+        notes.append(f"{key_note} — not consulted" if key_note else "key present")
+        return "off", "Off", notes
     if source.missing_env:
-        flags.append("needs " + ", ".join(source.missing_env))
-    state = f'<span class="cover warn">{esc(" · ".join(flags))}</span>' if flags else ""
-    return f"""<div class="src">
-<div class="top"><h3>{esc(source.name)}</h3>
-<span class="klass {'low' if low else ''}">Class {source.klass.letter}</span>
-<span class="cover">{esc(source.kind)}</span>{state}</div>
+        return "blocked", "Blocked", ["enabled in TOML", key_note]
+    return "live", "Live", []
+
+
+def _source_row(source: CustomSource) -> str:
+    low = source.klass.letter not in ("A", "B")
+    state, label, notes = _source_state(source)
+    note_html = "".join(
+        f'<span class="sub{" warn" if state == "blocked" and i else ""}">{esc(n)}</span>'
+        for i, n in enumerate(notes))
+    keyed = "CIK" if not source.needs_entity else "NAME"
+    return f"""<div class="src-row" data-state="{state}" data-klass="{source.klass.letter}">
+<div class="src-state"><span class="pill {state}">{esc(label)}</span>{note_html}</div>
+<div class="src-id"><h3>{esc(source.name)}</h3>
 {f'<p>{esc(source.note)}</p>' if source.note else ''}
-<span class="cover">{esc(source.coverage)}</span>
-<span class="url">{esc(source.url)}</span>
-<span class="cover">{esc(source.path.name if source.path else "")}</span>
+<span class="url" title="{esc(source.url)}">{esc(source.url)}</span></div>
+<div class="src-klass"><span class="klass {'low' if low else ''}">{source.klass.letter}</span>
+<span class="src-klass-body"><b>{esc(source.klass.label)}</b>
+<span class="sub">{"can mark findings verified" if source.klass.letter == "A"
+                  else "corroborates · never verifies"}</span></span></div>
+<div class="src-keyed"><span class="keyed">{keyed}</span>
+<span class="sub">{esc(source.coverage)}</span></div>
+<div class="src-file"><span class="sub">{esc(source.path.name if source.path else "")}</span>
+<span class="sub">{esc(source.kind)}</span></div>
 </div>"""
+
+
+def _source_health(sources) -> str:
+    """What the page is for: how many sources can actually run right now."""
+    states = [_source_state(s)[0] for s in sources]
+    live = states.count("live")
+    blocked = states.count("blocked")
+    off = states.count("off")
+    a_total = [s for s in sources if s.klass.letter == "A"]
+    a_live = sum(1 for s in a_total if _source_state(s)[0] == "live")
+    facts = [("Declared", f"{len(sources)}", "")]
+    facts.append(("Live", f"{live}", "pass"))
+    if blocked:
+        facts.append(("Blocked", f"{blocked}", "warn"))
+    if off:
+        facts.append(("Off", f"{off}", ""))
+    if a_total:
+        facts.append(("Class A live", f"{a_live} of {len(a_total)}", ""))
+    return '<div class="health">' + "".join(
+        f'<div class="health-fact {tone}"><span>{esc(label)}</span><b>{esc(value)}</b></div>'
+        for label, value, tone in facts) + "</div>"
+
+
+def _source_toolbar(sources) -> str:
+    states = [_source_state(s)[0] for s in sources]
+    letters = sorted({s.klass.letter for s in sources})
+    segs = "".join(
+        f'<span class="seg{" on" if key == "all" else ""}" data-filter="{key}">'
+        f'{"" if key == "all" else f"<i class=\'dot {key}\'></i>"}{esc(name)} '
+        f"<b>{count}</b></span>"
+        for key, name, count in (("all", "All", len(sources)),
+                                 ("live", "Live", states.count("live")),
+                                 ("blocked", "Blocked", states.count("blocked")),
+                                 ("off", "Off", states.count("off")))
+        if count or key in ("all", "live"))
+    options = "".join(f'<option value="{esc(l)}">Class {esc(l)}</option>' for l in letters)
+    return f"""<div class="src-tools">
+<label class="src-search">
+<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.2"/>
+<path d="M12.8 12.8 17 17"/></svg>
+<input type="search" id="src-filter" placeholder="Filter by name, host or file"
+       autocomplete="off" aria-label="Filter sources">
+</label>
+<div class="segs">{segs}</div>
+<select id="src-class" aria-label="Filter by reliability class">
+<option value="all">All classes</option>{options}</select>
+</div>"""
+
+
+def _pager(shown: int, total: int, unit: str, compact: bool = False) -> str:
+    """Every list on this page ends the same way, so none of them can grow
+    without the reader being told how much they are not seeing."""
+    per = ("" if compact else
+           '<label>Per page<select aria-label="Rows per page">'
+           "<option>25</option><option>50</option><option>100</option></select></label>")
+    arrow = ('<span class="pg-arrow" aria-disabled="true">'
+             '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="%s"/></svg></span>')
+    return (f'<div class="pager{" compact" if compact else ""}">'
+            f'<span class="sub">Showing 1–{shown:,} of {total:,}{" " + unit if unit else ""}</span>'
+            f'<div class="pg-right">{per}'
+            f'<div class="pg-arrows">{arrow % "M12.5 4 7 10l5.5 6"}'
+            f'{arrow % "M7.5 4 13 10l-5.5 6"}</div>'
+            f'<span class="sub">Page 1 of 1</span></div></div>')
 
 
 def _preset_chips() -> str:
@@ -1413,12 +1631,28 @@ def _mapping_inputs(sources) -> str:
 
 
 def _mapping_table(sources) -> str:
+    """The columns *are* the sources, so each one carries its class.
+
+    Split across the page these read as unrelated configuration; a company with
+    no line here is why an entity-keyed source reports not applicable.
+    """
     entities, _ = load_entities()
     keys = _mapped_keys(sources)
+    by_name = {s.name: s for s in sources}
     if not entities:
         return ('<p class="note">No company mappings yet. Built-in NHTSA makes and '
                 "any entities declared in a source file still apply.</p>")
-    head = "".join(f"<th scope='col'>{esc(label)}</th>" for _, label in keys)
+    head = ""
+    for key, label in keys:
+        source = by_name.get(key)
+        if source is None:
+            tag = '<span class="sub">built in</span>'
+        else:
+            state = _source_state(source)[0]
+            tag = (f'<span class="sub">Class {esc(source.klass.letter)}'
+                   f'{" · blocked" if state == "blocked" else ""}'
+                   f'{" · off" if state == "off" else ""}</span>')
+        head += f"<th scope='col'><b>{esc(label)}</b>{tag}</th>"
     rows = ""
     for ticker in sorted(entities):
         cells = ""
@@ -1428,17 +1662,24 @@ def _mapping_table(sources) -> str:
                       else '<td class="none">—</td>')
         rows += f'<tr><td class="tk">{esc(ticker)}</td>{cells}</tr>'
     return (f'<div class="maptable"><table><thead><tr><th scope="col">Ticker</th>'
-            f"{head}</tr></thead><tbody>{rows}</tbody></table></div>")
+            f"{head}</tr></thead><tbody>{rows}</tbody></table></div>"
+            + _pager(len(entities), len(entities), "companies"))
 
 
 def sources_page(message: str = "", error: str = "") -> bytes:
+    """Sources first, then what they need to run.
+
+    The declared sources used to sit unlabelled in the middle of the page,
+    below two configuration sections. They are the subject; the configuration
+    exists to serve them.
+    """
     sources, problems = load_sources()
     problems = problems + load_presets()[1]
-    preset_chips = _preset_chips()
+    presets = load_presets()[0]
     mapping_table = _mapping_table(sources)
     mapping_inputs = _mapping_inputs(sources)
-    cards = "".join(_source_card(s) for s in sources) or (
-        '<div class="src"><p>No sources configured yet.</p></div>'
+    rows = "".join(_source_row(s) for s in sources) or (
+        '<p class="note">No sources configured yet.</p>'
     )
     flash = ""
     if message:
@@ -1454,24 +1695,45 @@ def sources_page(message: str = "", error: str = "") -> bytes:
                   for k in ("A_PRIMARY", "B_COMPANY", "C_INDEPENDENT", "D_COMMERCIAL",
                             "E_RELEASE", "F_COMMUNITY")]
     )
-    inputs = "".join(
-        f"""<label>{esc(label)}
-<input type="{kind}" name="{key}" placeholder="{esc(placeholder)}" {'required' if required else ''}>
-</label>""" for key, label, kind, placeholder, required in _FIELDS
-    )
+    def field(key: str) -> str:
+        label, kind, placeholder, required = _FIELD_BY_KEY[key]
+        mark = '<span class="req">*</span>' if required else ""
+        return (f'<div class="field"><label for="src-{key}">{esc(label)}{mark}</label>'
+                f'<input type="{kind}" id="src-{key}" name="{key}" '
+                f'placeholder="{esc(placeholder)}"{" required" if required else ""}></div>')
+
+    def fields(*keys: str) -> str:
+        return "".join(field(k) for k in keys)
 
     body = f"""<header class="masthead">
 <h1>Sources</h1>
 <p class="lede">Declared sources run beside the built-in ones; only a Class-A source can mark a finding verified.</p>
+{_source_health(sources)}
 </header>
 {flash}
 <section class="check">
+<div class="check-head"><h2>Declared sources</h2>
+<span class="head-note">{len(sources)} declared · sources/*.toml</span></div>
+{_source_toolbar(sources)}
+<div class="srclist" id="srclist">{rows}</div>
+{_pager(len(sources), len(sources), "")}
+</section>
+
+<section class="check">
+<div class="check-head"><h2>Company name mappings</h2></div>
+{mapping_table}
+<form class="inline" method="post" action="/entities/set">
+<input type="text" name="ticker" placeholder="TICKER" maxlength="8" required autocomplete="off">
+{mapping_inputs}
+<button type="submit">Save mappings</button>
+</form>
+</section>
+
+<div class="srcband">
+<section class="check">
 <div class="check-head"><h2>Scan shortcuts</h2></div>
-<p class="reason">One-click buttons on the scan page. Any of the ~10,400
-SEC-registered tickers can be typed into the box without being listed here —
-these are just the ones worth a click. A ticker is checked against SEC's own
-register before it is saved, so a shortcut cannot point at nothing.</p>
-<div class="presets">{preset_chips}</div>
+<div class="presets">{_preset_chips()}</div>
+{_pager(len(presets), len(presets), "", compact=True) if presets else ""}
 <form class="inline" method="post" action="/presets/add">
 <input type="text" name="ticker" placeholder="TICKER" maxlength="8" required
        autocomplete="off">
@@ -1481,39 +1743,35 @@ register before it is saved, so a shortcut cannot point at nothing.</p>
 </section>
 
 <section class="check">
-<div class="check-head"><h2>Company mappings</h2></div>
-<p class="reason">Sources that are not keyed on CIK need to be told how a company
-is named in them. Every mapping here is typed by a person on purpose — a name
-search against these returns the wrong company often enough that one false
-positive on a safety or enforcement record is worse than no record at all. A form
-is fine; guessing is not. Leave a field blank to remove that mapping.</p>
-{mapping_table}
-<form class="inline" method="post" action="/entities/set">
-<input type="text" name="ticker" placeholder="TICKER" maxlength="8" required autocomplete="off">
-{mapping_inputs}
-<button type="submit">Save mappings</button>
-</form>
-</section>
-
-<div class="srcgrid">{cards}</div>
-<section class="check">
-<div class="check-head"><h2>Add a source</h2></div>
-<p class="reason">The URL may contain <code>{{entity}}</code>, <code>{{ticker}}</code> or
-<code>{{cik}}</code>. Use <code>{{cik}}</code> where you can — it is exact, so the
-source then applies to every company without a mapping. A name-based source needs
-one entity line per company, and will report as not applicable for anything else.</p>
+<div class="check-head"><h2>Declare a source</h2></div>
 <form class="add" method="post" action="/sources/add">
-{inputs}
-<label>Reliability class<select name="class">{options}</select></label>
-<label>Format<select name="kind"><option value="json">JSON</option>
-<option value="rss">RSS / Atom</option></select></label>
-<label class="wide">Entity mapping — one per line, TICKER = Name as the source spells it
-<textarea name="entities" placeholder="TSLA = Tesla&#10;AAPL = Apple Inc"></textarea></label>
-<div class="wide"><button type="submit">Add source</button></div>
+<div class="fieldset"><span class="eyebrow">1 · What it is</span>
+<div class="fields two">{fields("name", "note")}</div>
+</div>
+<div class="fieldset"><span class="eyebrow">2 · Where it lives</span>
+<div class="fields">{fields("url")}</div>
+<span class="sub"><code>{{entity}}</code> · <code>{{ticker}}</code> · <code>{{cik}}</code>
+— <code>{{cik}}</code> is exact and needs no mapping</span>
+<div class="fields two">
+<div class="field"><label for="src-class-pick">Class</label>
+<select id="src-class-pick" name="class">{options}</select></div>
+<div class="field"><label for="src-kind">Format</label>
+<select id="src-kind" name="kind"><option value="json">JSON</option>
+<option value="rss">RSS / Atom</option></select></div>
+</div>
+</div>
+<div class="fieldset"><span class="eyebrow">3 · Extraction</span>
+<div class="rows">{fields("items", "title", "detail", "date", "link", "match")}</div>
+</div>
+<div class="fieldset"><span class="eyebrow">4 · Company names</span>
+<div class="field"><label for="src-entities">One per line, TICKER = Name as the source spells it</label>
+<textarea id="src-entities" name="entities" placeholder="TSLA = Tesla&#10;AAPL = Apple Inc"></textarea></div>
+</div>
+<div class="add-actions"><button type="submit">Add source</button></div>
 </form>
 </section>
-<footer>Sources are plain TOML in <code>sources/</code>. Anything added here can be
-edited or deleted by hand.</footer>"""
+</div>
+{SOURCES_SCRIPT}"""
     return _page("Sources — Contour", body, current="/sources")
 
 
