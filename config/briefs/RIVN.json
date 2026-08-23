@@ -4,24 +4,24 @@
   "written": "2026-08-23",
   "provenance": "simulated",
   "brief": {
-    "headline": "Rivian's revenue movement was carried entirely by software and services, which grew $1.07B and accounted for 258% of the total change while new electric vehicles fell $522M and regulatory credits fell $136M \u2014 a shift the rewritten risk factors and the recall record both touch.",
+    "headline": "Software and services, at 9.6% of revenue, carried 257.8% of the revenue movement while new electric vehicle revenue fell $522.00M and regulatory credits fell $136.00M, and the risk section was rewritten in the same filing to name software and services markets as competitive.",
     "threads": [
       {
-        "title": "One component carried more than the whole movement",
-        "reading": "Software and services grew from $476M to $1.55B, an increase of $1.07B, which is 257.8% of the total revenue movement while the line is 9.6% of revenue \u2014 26.9x its weight. It exceeded the whole movement because two other lines pulled the other way: new electric vehicles fell $522M and regulatory credits fell $136M. The reported total moved up; the vehicle line did not.",
+        "title": "Where the revenue moved",
+        "reading": "Software and services grew from $476.00M to $1.55B, a $1.07B increase carrying 257.8% of the total revenue movement while making up 9.6% of the prior-period base \u2014 26.9x its weight, the highest concentration any check on this page flagged (Revenue composition, Class A, 10-K filed 2026-02-12). A component that carries more than the whole movement means other lines ran the other way, and the same check reports them: new electric vehicles down $522.00M and regulatory credits down $136.00M. The two lines tied to vehicle sales both fell in the period the software and services line more than covered them.",
         "supporting": [
-          "The quarterly earnings release statement of consolidated revenue of $1.658 billion for the period ended 2026-06-30 matched the figure reported to the SEC exactly, a 0.00% difference (Class B release, tested against Class A filings by the Management claims check).",
-          "The financial condition check ran and nothing crossed a threshold, so no margin or earnings-composition finding was raised (Class A, Financial condition check).",
-          "The restatements check ran and nothing crossed a threshold, so the comparison base for prior periods was not revised (Class A, Restatements check)."
+          "The company's stated consolidated revenue of $1.66B for the quarter ended 2026-06-30, described in the release as a 27 percent increase over the same quarter of the prior year, matched the figure reported to the SEC exactly \u2014 0.00% difference (Management claims check, Class B release measured against Class A figures).",
+          "The financial condition check found nothing crossing a threshold, and the restatement check found nothing either (Class A).",
+          "Software and services more than tripled year over year, from $476.00M to $1.55B, read from the annual disaggregation of revenue schedule (Revenue composition check, Class A)."
         ],
         "against": [
-          "New electric vehicle revenue fell $522M over the annual period (Class A, Revenue composition check, 10-K disaggregation of revenue, R49).",
-          "Regulatory credits fell $136M in the same period (Class A, Revenue composition check, R49).",
-          "A line at 9.6% of revenue accounted for 257.8% of the total movement, 26.9x its weight, so the direction of the total rests on one component (Class A, Revenue composition check, R49)."
+          "New electric vehicle revenue fell $522.00M over the same period (Revenue composition check, Class A, disaggregation of revenue schedule).",
+          "Regulatory credits fell $136.00M over the same period (same check, Class A).",
+          "The line carrying the movement is 9.6% of revenue but 257.8% of the change \u2014 26.9x its weight, flagged high severity (Revenue composition check, Class A)."
         ],
         "sources": [
           {
-            "label": "10-K schedule of disaggregation of revenue (Details), filed 2026-02-12",
+            "label": "REVENUES - Disaggregation of Revenue (Details), 10-K filed 2026-02-12",
             "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417826000008/R49.htm",
             "klass": "A"
           },
@@ -33,65 +33,63 @@
         ]
       },
       {
-        "title": "The risk section was rewritten around the same shift",
-        "reading": "Of 91 risk factors, 9 were added, 7 removed, 76 modified and 6 left unchanged. The removals and additions track the revenue shift: a removed factor said the automotive market is highly competitive, and an added one says the automotive and value added software and services markets in which the company operates are highly competitive. A tariff factor moved from a risk that could adversely affect the business to one that has been and may continue to. Other removals have no visible successor in this material.",
+        "title": "Risk language moved with the mix",
+        "reading": "Of 55 risk factors the filing added 3, removed 6, modified 46 and left 6 unchanged. Two changes read as rewrites in place rather than genuine departures: the removed 'The automotive market is highly competitive' is matched by an added factor covering 'the automotive and value added software and services markets in which we operate', and the removed 'Our business could be adversely affected by trade tariffs' is matched by an added 'Our business has been and may continue to be adversely affected by trade tariffs or other trade barriers'. The competition rewrite sits in the same filing whose revenue check shows software and services carrying the movement; the tariff rewrite moves the same subject from conditional to realized.",
         "supporting": [
-          "The competition risk was not deleted but broadened \u2014 the added factor covers software and services alongside automotive, matching where the revenue movement came from (Class A, Filing language check, 10-K filed 2026-02-12).",
-          "The tariff risk was restated in stronger terms rather than dropped: from could be adversely affected to has been and may continue to be adversely affected (Class A, Filing language check).",
-          "Additions include a new factor on dependence on vendors and suppliers necessary for production of products and services (Class A, Filing language check)."
+          "The added competition factor extends to software and services markets \u2014 the disclosure language tracks the line the revenue composition check shows growing (Filing language and Revenue composition checks, both Class A).",
+          "The section was actively revised rather than carried forward: 46 of 55 factors modified, only 6 unchanged (Filing language check, Class A).",
+          "Four factors were substantially rewritten, including consumer demand and retention at 23% overlap and EV adoption at 9% overlap \u2014 near-total rewrites rather than boilerplate (Filing language check, Class A, 10-K filed 2026-02-12)."
         ],
         "against": [
-          "Only 6 of 91 risk factors were left unchanged; 76 were modified, so nearly the whole section was reworked in one year (Class A, Filing language check).",
-          "A removed factor covered risks associated with the joint venture with the Volkswagen Group, and no successor appears in the material surfaced here (Class A, Filing language check, 2024 10-K text).",
-          "A removed factor covered expectations of continuing significant cost of revenues, operating expenses and capital expenditures and the risk of underestimating or not effectively managing them (Class A, Filing language check, 2024 10-K text).",
-          "The demand risk factors were substantially rewritten at 23% and 9% overlap with their prior text, so year-over-year comparison of that language is limited (Class A, Filing language check)."
+          "The tariff factor moved from conditional to realized \u2014 'could be adversely affected' in the 10-K filed 2025-02-24 against 'has been and may continue to be adversely affected' in the 10-K filed 2026-02-12 (Filing language check, Class A).",
+          "Six factors were removed, including 'We are subject to risks associated with our joint venture with the Volkswagen Group' and one on continuing to incur and manage significant cost of revenues, operating expenses and capital expenditures; the material shows no added factor covering either subject (Filing language check, high severity, Class A).",
+          "A factor was added on dependence on establishing and maintaining relationships with vendors and suppliers necessary for production, appearing in the same filing whose revenue check shows new electric vehicle revenue down $522.00M (Filing language and Revenue composition checks, Class A)."
         ],
         "sources": [
           {
-            "label": "10-K risk factors, filed 2026-02-12",
+            "label": "Risk factors, 10-K filed 2026-02-12",
             "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417826000008/rivn-20251231.htm",
             "klass": "A"
           },
           {
-            "label": "Prior 10-K risk factors, filed 2025-02-24",
+            "label": "Risk factors, prior 10-K filed 2025-02-24",
             "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417825000007/rivn-20241231.htm",
+            "klass": "A"
+          },
+          {
+            "label": "REVENUES - Disaggregation of Revenue (Details), 10-K filed 2026-02-12",
+            "url": "https://www.sec.gov/Archives/edgar/data/1874178/000187417826000008/R49.htm",
             "klass": "A"
           }
         ]
       },
       {
-        "title": "Software in the revenue line, software in the recall line",
-        "reading": "Six campaigns fall in the 2024-2026 window out of 13 on record. Two of them describe the same defect: one or both front turn signals may fail to illuminate and flash, failing to comply with a federal standard \u2014 campaign 25V387000 on 2025 R1S and R1T vehicles in June 2025, and campaign 26V508000 on 2025-2026 R1S and R1T vehicles in August 2026, fourteen months later. A third covers Hands-Free Highway Assist software that may fail to correctly identify a lead vehicle, in the same period the software and services line became the largest contributor to the revenue movement.",
+        "title": "Safety record beside the software line",
+        "reading": "The safety check recorded six campaigns between 2025-06-11 and 2026-08-06, out of 13 on record for the registrant. Two carry the same description \u2014 one or both front turn signals may fail to illuminate and flash: 25V387000 on 2025 R1S and R1T reported 2025-06-11, and 26V508000 on 2025-2026 R1S and R1T reported 2026-08-06, fourteen months later and extended into the 2026 model year. The window also holds a Hands-Free Highway Assist software campaign for failing to correctly identify a lead vehicle (25V585000) and a High Voltage Distribution Box grounding fault that may cause loss of drive power (25V537000), both on the software and electrical side of the vehicle.",
         "supporting": [
-          "The ADAS campaign identifies a specific software version boundary, prior to 2025.18.30, indicating a scoped and remediable defect (Class A, NHTSA campaign 25V585000).",
-          "A Federal Register notice dated 2026-07-06 records a grant of a Rivian petition for a decision of inconsequential noncompliance (Class A, Federal Register).",
-          "The 10-K added a risk factor on dependence on vendors and suppliers necessary for production, disclosing the supply dependency that several campaigns touch (Class A, Filing language check)."
+          "A Federal Register notice dated 2026-07-06 records a granted petition for decision of inconsequential noncompliance for Rivian Automotive, LLC (Federal Register, listed Class A in the corroborating feed).",
+          "The NHTSA descriptions are narrowly scoped \u2014 named model years, a named software version threshold of 2025.18.30, and in one case only vehicles that previously had service performed (Safety record check, Class A).",
+          "13 campaigns are on record in total for the registrant across the whole NHTSA history held (Safety record check note, Class A)."
         ],
         "against": [
-          "Two separate campaigns fourteen months apart describe the same front turn signal failure and the same federal-standard noncompliance, with overlapping model years (Class A, NHTSA campaigns 25V387000 and 26V508000).",
-          "Two further campaigns concern critical fasteners \u2014 second-row seat belt retractor bolts that may be improperly tightened, and a toe link that may have been reassembled incorrectly during prior service (Class A, NHTSA campaigns 26V009000 and 26V003000).",
-          "A campaign covers an improperly grounded connection in the high voltage distribution box that may cause a loss of drive power (Class A, NHTSA campaign 25V537000).",
-          "The ADAS software recall sits in the same period in which software and services carried 257.8% of the revenue movement (Class A, NHTSA campaign 25V585000 with the Revenue composition check)."
+          "The same front turn signal defect description appears in two campaigns fourteen months apart, the later covering 2025 and 2026 model years \u2014 25V387000 reported 2025-06-11 and 26V508000 reported 2026-08-06 (Safety record check, Class A, NHTSA).",
+          "Two 2025 campaigns concern drive power and driver assistance: an HVDB grounding fault that may cause loss of drive power, 25V537000 reported 2025-08-21, and Hands-Free Highway Assist software that may fail to correctly identify a lead vehicle, 25V585000 reported 2025-09-08 (Safety record check, Class A).",
+          "Seat belt retractor bolts that may be improperly tightened, 26V009000 reported 2026-01-15, and a suspension toe link that may have been reassembled incorrectly during prior service, 26V003000 reported 2026-01-05, were both reported in January 2026 (Safety record check, Class A)."
         ],
         "sources": [
           {
-            "label": "NHTSA recall 26V508000, front turn signals, 2026-08-06",
+            "label": "NHTSA campaign 26V508000, front turn signals, reported 2026-08-06",
             "url": "https://www.nhtsa.gov/recalls?nhtsaId=26V508000",
             "klass": "A"
           },
           {
-            "label": "NHTSA recall 25V387000, front turn signals, 2025-06-11",
+            "label": "NHTSA campaign 25V387000, front turn signals, reported 2025-06-11",
             "url": "https://www.nhtsa.gov/recalls?nhtsaId=25V387000",
             "klass": "A"
           },
           {
-            "label": "NHTSA recall 25V585000, Hands-Free Highway Assist software, 2025-09-08",
+            "label": "NHTSA campaign 25V585000, Hands-Free Highway Assist software",
             "url": "https://www.nhtsa.gov/recalls?nhtsaId=25V585000",
-            "klass": "A"
-          },
-          {
-            "label": "NHTSA recall 26V009000, seat belt retractor fasteners, 2026-01-15",
-            "url": "https://www.nhtsa.gov/recalls?nhtsaId=26V009000",
             "klass": "A"
           },
           {
@@ -102,15 +100,15 @@
         ]
       }
     ],
-    "corroboration": "There is almost no corroborating material here: no news, aggregator or community items at all, only Federal Register notices and the SEC filing feed, both of which are primary records rather than outside commentary. That means nothing independent either agrees or disagrees with the filings on this company, and the two Federal Register notices \u2014 a 2023 receipt and a 2026 grant of petitions for decisions of inconsequential noncompliance \u2014 speak only to the regulator's handling of specific petitions, not to anything in the financial statements.",
+    "corroboration": "There is very little corroborating material here: no news or community items were collected for this registrant at all, leaving two Federal Register notices (labelled Class A in the corroborating feed) and a list of recent SEC filings. The only Class B item, the 2026-07-30 earnings release, matched the filed revenue figure exactly. With no Class B-F press or community material, nothing on this page points anywhere the filings do not \u2014 which is an absence of contradiction, not confirmation.",
     "not_checked": [
-      "The financial condition check crossed no threshold, so no operating income, margin or earnings-composition detail was surfaced for this company.",
-      "9 of 10 management claims from the earnings release were not testable against filed figures; only the consolidated revenue statement could be compared.",
-      "Several entries flagged as added risk factors captured only the company's name from the document header, so the count of 9 additions overstates the substantive changes that could be read.",
-      "13 recall campaigns are on record but only six fall in the 2024-2026 model-year window; the rest were not detailed, and no campaign's vehicle count is in the material.",
-      "Whether the two front turn signal campaigns cover the same vehicles or distinct populations is not established by the material.",
-      "No outside corroborating material exists for this company in the sources declared, so nothing could be cross-checked against press or third-party reporting.",
-      "The contents of the 10-Q filed 2026-07-30 were not examined beyond the earnings release exhibit."
+      "9 of 10 management claims were not testable against a filed figure; only consolidated revenue for the quarter ended 2026-06-30 could be matched (Management claims check).",
+      "No news or community sources returned anything for this registrant, so there is no outside material to set against the filings.",
+      "The financial condition and restatement checks report only that nothing crossed a threshold and supply no figures, so profitability, cash position and any prior-period revisions cannot be characterized from this material.",
+      "Revenue composition was read from the annual disaggregation schedule only; no interim period composition was checked.",
+      "NHTSA coverage is scoped to make 'rivian', model years 2024-2026, so campaigns outside that scope are not reflected beyond the count of 13 on record.",
+      "Several risk factor excerpts are truncated mid-sentence in the material, including the added supplier-dependence factor and two of the removed factors, so their full text could not be read.",
+      "The filing feed lists a 10-Q filed 2026-07-30 and a cluster of Form 4 and Form 144 filings dated 2026-08-18 to 2026-08-21, but their contents were not part of any check."
     ]
   }
 }
