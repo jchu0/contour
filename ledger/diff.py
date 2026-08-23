@@ -20,6 +20,12 @@ UNCHANGED_THRESHOLD = 0.97
 # Blocks shorter than this are headers, page furniture, or stray table cells.
 MIN_BLOCK_CHARS = 200
 
+# Opens lowercase, or with a word that cannot begin a risk factor: the
+# continuation of one split across a page break. Deliberately NOT
+# case-insensitive — under re.I the [a-z] class matches capitals too, which
+# makes every heading a continuation and collapses the section to one block.
+_CONTINUATION = re.compile(r"^(?:[a-z]|(?:And|Or|Which|That|But)\b)")
+
 
 class Change(str, Enum):
     ADDED = "added"
@@ -156,6 +162,19 @@ def split_risk_factors(body: str) -> list[Block]:
         return split_blocks(body)
 
     chunks = body.split(HEADING_MARK)
+
+    # A running page header — the registrant's own name at the top of every
+    # page — is emphasised exactly like a risk-factor heading, so it arrives
+    # here as one. It gives itself away by repeating: a real risk factor is
+    # stated once. Rivian's 10-K carried six of them, and each became an
+    # "added risk factor" whose whole text was the company's name.
+    seen: dict[str, int] = {}
+    for chunk in chunks[1:]:
+        first = next((line.strip() for line in chunk.splitlines() if line.strip()), "")
+        if first:
+            seen[first] = seen.get(first, 0) + 1
+    furniture = {text for text, count in seen.items() if count > 1}
+
     blocks: list[Block] = []
     strict: list[Block] = []
     for chunk in chunks[1:]:
@@ -166,6 +185,18 @@ def split_risk_factors(body: str) -> list[Block]:
         # The Item header itself is emphasised; its preamble is section framing,
         # not a risk factor, and diffing it just adds noise every year.
         if re.match(r"^Item\s+\d", heading, re.IGNORECASE):
+            continue
+        if heading in furniture:
+            continue
+        # A heading that opens mid-sentence is a risk factor broken across a
+        # page, not a new one. Its text belongs to the block above it.
+        if _CONTINUATION.match(heading) and blocks:
+            previous = blocks[-1]
+            blocks[-1] = Block(index=previous.index,
+                               text=f"{previous.text}\n{chunk.strip()}",
+                               heading=previous.heading)
+            if strict and strict[-1].index == previous.index:
+                strict[-1] = blocks[-1]
             continue
         rest = "\n".join(lines[1:]).strip()
         # Category labels ("Business Risks") carry no prose of their own; the
