@@ -23,8 +23,9 @@ never presented as fresh.
 
 from __future__ import annotations
 
+import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 
 from ledger import profile
@@ -120,6 +121,7 @@ class Brief:
     model: str | None = None
     written: str | None = None
     cached: bool = False
+    material: str = ""
     provenance: str = ""
     available: bool = True
     reason: str | None = None
@@ -225,11 +227,21 @@ def load_cached(ticker: str) -> Brief | None:
         stored = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    return _parse(json.dumps(stored.get("brief", {})),
-                  model=stored.get("model", "unknown"),
-                  written=stored.get("written", "unknown"),
-                  cached=True,
-                  provenance=stored.get("provenance", ""))
+    brief = _parse(json.dumps(stored.get("brief", {})),
+                   model=stored.get("model", "unknown"),
+                   written=stored.get("written", "unknown"),
+                   cached=True,
+                   provenance=stored.get("provenance", ""))
+    return replace(brief, material=str(stored.get("material", "")))
+
+
+def material_fingerprint(text: str) -> str:
+    """What the brief was written from, in twelve characters.
+
+    A brief describes one scan. If the material is identical the brief would
+    say the same thing, so there is nothing to pay for a second time.
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
 
 
 def save_brief(ticker: str, brief: Brief, *, provenance: str = "") -> None:
@@ -240,6 +252,7 @@ def save_brief(ticker: str, brief: Brief, *, provenance: str = "") -> None:
         "model": brief.model,
         "written": brief.written or date.today().isoformat(),
         "provenance": provenance or brief.provenance,
+        "material": brief.material,
         "brief": {
             "headline": brief.headline,
             "threads": brief.threads,
@@ -250,16 +263,28 @@ def save_brief(ticker: str, brief: Brief, *, provenance: str = "") -> None:
 
 
 def analyst_brief(report: Report, *, model: str = MODEL, use_cache: bool = True) -> Brief:
-    """Write the brief. A failure is reported, never raised — the report stands."""
+    """Write the brief. A failure is reported, never raised — the report stands.
+
+    A stored brief is reused whenever the material behind it has not changed —
+    with or without credentials. The cache used to be consulted only when there
+    was no key, so every view of a report was a fresh billed call and the prose
+    drifted between two readings of the same scan.
+    """
+    material = brief_input(report)
+    fingerprint = material_fingerprint(material)
+    cached = load_cached(report.ticker) if use_cache else None
+    if cached and cached.material == fingerprint:
+        return cached
     if credentials() is not None:
-        cached = load_cached(report.ticker) if use_cache else None
         if cached:
+            # Stale, but written from a real scan of this company. Better than
+            # nothing, and it says on the page when it was written.
             return cached
         return Brief(available=False, reason=(
             "no Anthropic credentials, and this company has not been briefed before. "
             "Every finding on this page was computed without a model and stands on "
             "its own; the brief only reads them together."))
-    text, reason = call(SYSTEM, brief_input(report), model=model, max_tokens=MAX_TOKENS)
+    text, reason = call(SYSTEM, material, model=model, max_tokens=MAX_TOKENS)
     if reason:
         return Brief(available=False, reason=reason)
     try:
@@ -267,6 +292,7 @@ def analyst_brief(report: Report, *, model: str = MODEL, use_cache: bool = True)
                        written=datetime.now().date().isoformat(), provenance="live")
     except ValueError:
         return Brief(available=False, reason="the model did not return usable JSON")
+    brief = replace(brief, material=fingerprint)
     save_brief(report.ticker, brief, provenance="live")
     return brief
 
