@@ -26,3 +26,4 @@ out/
 # pinned check rosters and model-proposed entity names awaiting review.
 config/authored/
 config/entities_proposed.json
+config/feedback.jsonl
