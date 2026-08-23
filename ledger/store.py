@@ -197,7 +197,8 @@ CREATE TABLE IF NOT EXISTS tracked (
     tracked_since  TEXT NOT NULL,
     baseline_scan  INTEGER,
     baseline_facts INTEGER NOT NULL DEFAULT 0,
-    note           TEXT NOT NULL DEFAULT ''
+    note           TEXT NOT NULL DEFAULT '',
+    cadence        TEXT NOT NULL DEFAULT 'daily'
 );
 """
 
@@ -212,15 +213,61 @@ class Tracked:
     scans: int
     last_scan: str | None
     facts_now: int
+    cadence: str = "daily"
 
     @property
     def facts_added(self) -> int:
         """Figures the ledger has picked up since the baseline was taken."""
         return max(0, self.facts_now - self.baseline_facts)
 
+    def due(self, today: date | None = None) -> bool:
+        """Has enough time passed for the background pass to revisit this one?
+
+        A company with no scan on record is always due: never scanned is not
+        the same as scanned recently, and treating it as up to date would hide
+        the gap rather than close it.
+        """
+        every = CADENCES.get(self.cadence, 1)
+        if every is None:
+            return False
+        if not self.last_scan:
+            return True
+        try:
+            last = date.fromisoformat(self.last_scan[:10])
+        except ValueError:
+            return True
+        return ((today or date.today()) - last).days >= every
+
+
+# How often the background pass should revisit a company. `manual` means it
+# never does — the company stays tracked and is rescanned only on request.
+CADENCES: dict[str, int | None] = {
+    "daily": 1,
+    "weekly": 7,
+    "monthly": 30,
+    "manual": None,
+}
+
 
 def _ensure_tracked(connection: sqlite3.Connection) -> None:
     connection.executescript(_TRACKED_SCHEMA)
+    # CREATE TABLE IF NOT EXISTS leaves an existing table alone, so a database
+    # written before cadence existed needs the column added explicitly.
+    columns = {r["name"] for r in connection.execute("PRAGMA table_info(tracked)")}
+    if "cadence" not in columns:
+        connection.execute(
+            "ALTER TABLE tracked ADD COLUMN cadence TEXT NOT NULL DEFAULT 'daily'")
+        connection.commit()
+
+
+def set_cadence(connection: sqlite3.Connection, ticker: str, cadence: str) -> bool:
+    if cadence not in CADENCES:
+        raise ValueError(f"{cadence} is not a cadence")
+    _ensure_tracked(connection)
+    cur = connection.execute(
+        "UPDATE tracked SET cadence = ? WHERE ticker = ?", (cadence, ticker.upper()))
+    connection.commit()
+    return cur.rowcount > 0
 
 
 def track_company(
@@ -270,6 +317,7 @@ def _tracked_row(connection: sqlite3.Connection, row: sqlite3.Row) -> Tracked:
         ticker=row["ticker"], company=row["company"], cik=row["cik"],
         tracked_since=row["tracked_since"], baseline_facts=row["baseline_facts"],
         scans=stats["n"], last_scan=stats["last"], facts_now=facts,
+        cadence=(row["cadence"] if "cadence" in row.keys() else "daily") or "daily",
     )
 
 

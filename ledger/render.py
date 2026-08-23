@@ -78,12 +78,19 @@ CSS = """
 --high:#A32C2C;--high-soft:#F7E5E4;--med:#8A6110;--med-soft:#F7EFDC;--pass:#2C6B4F;
 --pass-soft:#E1EFE8;--sans:"Archivo",Helvetica,Arial,sans-serif;
 --serif:"Source Serif 4",Georgia,serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
-@media (prefers-color-scheme:dark){.chart{--pos:#3987e5;--neg:#e66767;
---grid:#242C36;--zero:#3B444F}
-:root{--paper:#0E1218;--surface:#151B23;--surface-2:#1D242E;
---ink:#E8EBF0;--ink-2:#A9B3C1;--ink-3:#798393;--rule:#2A323D;--rule-strong:#3B444F;
+/* Three states, not two: an explicit light choice has to beat a dark OS, so
+   the media query is guarded and the stamped choices are declared after it. */
+@media (prefers-color-scheme:dark){
+:root:not([data-theme="light"]) .chart{--pos:#3987e5;--neg:#e66767;--grid:#242C36;--zero:#3B444F}
+:root:not([data-theme="light"]){--ink:#E8EBF0;--ink-2:#A9B3C1;--ink-3:#798393;--rule:#2A323D;--rule-strong:#3B444F;
 --accent:#93AAE2;--accent-soft:#1B2740;--high:#E58A85;--high-soft:#331F1E;--med:#D9AE5F;
---med-soft:#2F2716;--pass:#7FC5A2;--pass-soft:#16291F}}
+--med-soft:#2F2716;--pass:#7FC5A2;--pass-soft:#16291F;
+--paper:#0E1218;--surface:#151B23;--surface-2:#1D242E}}
+:root[data-theme="dark"] .chart{--pos:#3987e5;--neg:#e66767;--grid:#242C36;--zero:#3B444F}
+:root[data-theme="dark"]{--ink:#E8EBF0;--ink-2:#A9B3C1;--ink-3:#798393;--rule:#2A323D;--rule-strong:#3B444F;
+--accent:#93AAE2;--accent-soft:#1B2740;--high:#E58A85;--high-soft:#331F1E;--med:#D9AE5F;
+--med-soft:#2F2716;--pass:#7FC5A2;--pass-soft:#16291F;
+--paper:#0E1218;--surface:#151B23;--surface-2:#1D242E}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
 font-size:1rem;line-height:1.55;-webkit-font-smoothing:antialiased}

@@ -17,7 +17,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from ledger.api import delta_dict, dumps, index_dict, report_dict, sources_dict, tracked_dict
 from ledger.config import (
@@ -51,6 +51,7 @@ from ledger.store import (
     latest_delta,
     scan_history,
     track_company,
+    set_cadence,
     tracked_companies,
     tracking,
     untrack_company,
@@ -66,11 +67,13 @@ DAILY_INTERVAL_SECONDS = 24 * 60 * 60
 
 
 def _daily_loop(client: EdgarClient, interval: int = DAILY_INTERVAL_SECONDS) -> None:
-    """Rescan tracked companies once a day, in the background.
+    """Wake once a day and rescan the companies that are due.
 
     Deliberately dumb: sleep, scan, repeat. It holds no schedule of its own, so
     restarting the server restarts the clock — which is the honest behaviour for
-    something that lives only as long as the process does.
+    something that lives only as long as the process does. What it does not do
+    is ignore cadence: a company set to weekly is skipped until a week has
+    passed since its last scan.
     """
     import datetime
     import time as _time
@@ -78,7 +81,7 @@ def _daily_loop(client: EdgarClient, interval: int = DAILY_INTERVAL_SECONDS) -> 
     while True:
         _time.sleep(interval)
         try:
-            rescan_tracked(client)
+            rescan_tracked(client, due_only=True)
             DAILY["last"] = datetime.date.today().isoformat()
         except Exception:  # noqa: BLE001 — a failed pass must not kill the thread
             continue
@@ -143,6 +146,83 @@ body:has(.report) .report-main{max-width:46rem;margin:0 auto;width:100%}
 .panel-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.6rem}
 .panel-head h2{margin:0;font-size:1rem;font-weight:600}
 .panel-head a{font-family:var(--mono);font-size:.75rem}
+/* -- scan: one company ------------------------------------------------- */
+form.scan input[type=text]{flex:0 1 21rem}
+.form-note{display:flex;align-items:center;font-family:var(--mono);font-size:.75rem;
+color:var(--ink-3)}
+.head-link{margin-left:auto;font-family:var(--mono);font-size:.75rem}
+.wl{border:1px solid var(--rule);overflow-x:auto}
+.wl table{width:100%;min-width:44rem;border-collapse:collapse;font-size:.875rem}
+.wl th{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3);text-align:left;font-weight:400;
+padding:.6rem .8rem;border-bottom:1px solid var(--rule)}
+.wl td{padding:.65rem .8rem;border-bottom:1px solid var(--rule)}
+.wl tr:last-child td{border-bottom:0}
+.wl td.tk{font-family:var(--mono);font-weight:600;color:var(--accent)}
+.wl td.sub{font-family:var(--mono);font-size:.8125rem;color:var(--ink-3)}
+.wl td.num,.wl th.num{text-align:right;font-family:var(--mono);
+font-variant-numeric:tabular-nums}
+.wl td.go{text-align:right;white-space:nowrap}
+.wl td.go a{font-family:var(--mono);font-size:.75rem}
+.chip{font-family:var(--mono);font-size:.6875rem;padding:.15rem .5rem;
+background:var(--surface-2);color:var(--ink-3);white-space:nowrap}
+.chip.warn{background:var(--med-soft);color:var(--med)}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip-link{font-family:var(--mono);font-size:.75rem;text-decoration:none;
+border:1px solid var(--rule);background:var(--surface);padding:.45rem .7rem;
+color:var(--ink-3)}
+.chip-link b{color:var(--accent)}
+.chip-link:hover{border-color:var(--accent)}
+/* -- compare: two sides, picked from the watchlist --------------------- */
+.picker{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+gap:0 1.25rem;align-items:start}
+.vs-rail{display:flex;justify-content:center;padding-top:3.2rem}
+.side{display:flex;flex-direction:column;gap:.6rem;min-width:0}
+.side-head{display:flex;align-items:baseline;gap:.75rem;padding-bottom:.5rem;
+border-bottom:1px solid var(--rule-strong)}
+.side-head .tk{margin-left:auto;font-family:var(--mono);font-size:.875rem;
+font-weight:600;color:var(--accent)}
+.pick-filter{display:flex;align-items:center;gap:.7rem}
+.pick-filter input[type=search]{flex:1 1 auto;min-width:0;font-family:var(--mono);
+font-size:.8125rem;padding:.5rem .6rem;background:var(--surface);color:var(--ink);
+border:1px solid var(--rule-strong);-webkit-appearance:none;appearance:none}
+.pick-filter input::placeholder{color:var(--ink-3)}
+.pick-filter .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+white-space:nowrap}
+/* The list scrolls rather than growing: a hundred tracked companies would
+   otherwise be a 7,000px column, and the commit bar would sit below both. */
+.picks{display:flex;flex-direction:column;gap:1px;background:var(--rule);
+border:1px solid var(--rule);max-height:24rem;overflow-y:auto}
+.pick[hidden]{display:none}
+.pick{display:flex;align-items:flex-start;gap:.7rem;padding:.7rem .85rem;
+background:var(--surface);cursor:pointer}
+.pick:hover{background:var(--surface-2)}
+.pick input{margin:.25rem 0 0;accent-color:var(--accent);flex:none}
+.pick:has(input:checked){background:var(--accent-soft)}
+.pick.taken{cursor:default;opacity:.55}
+.pick.taken:hover{background:var(--surface)}
+.pick-body{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.pick-id{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap}
+.pick-id .tk{font-family:var(--mono);font-size:.8125rem;color:var(--accent)}
+.pick-id b{font-family:var(--sans);font-size:.875rem;font-weight:600}
+.pick .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.pick-note{margin-left:auto;font-family:var(--mono);font-size:.625rem;
+letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.pick-alt{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.pick-alt input[type=text]{flex:0 1 8rem;min-width:6rem;font-size:.8125rem;
+padding:.5rem .6rem}
+.pick-alt .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.commit{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;
+margin-top:1.5rem;padding-top:1.1rem;border-top:2px solid var(--ink)}
+.commit button{margin-left:auto}
+.commit-who,.commit-route{display:flex;flex-direction:column;gap:.2rem}
+.commit-pair{display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono);
+font-size:1.0625rem;font-weight:600;color:var(--accent)}
+.commit .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.commit-route code{font-family:var(--mono);font-size:.75rem;color:var(--ink-2)}
+.switcher-line{margin-bottom:1.25rem;display:flex}
+.switcher-line .head-link{margin-left:0}
+
 .switcher{margin-bottom:1.25rem}
 .switcher>summary{list-style:none;width:fit-content;cursor:pointer;
   font-family:var(--mono);font-size:.75rem;color:var(--ink-2);
@@ -278,7 +358,14 @@ body:has(.report) .report-main{max-width:46rem;margin:0 auto;width:100%}
 .pick{display:flex;align-items:flex-start;gap:.7rem;padding:.6rem .8rem;border-radius:6px;
   border:1px solid var(--rule);cursor:pointer}
 .pick:hover{border-color:var(--rule-strong)}
-.pick.on{border-color:var(--accent);background:var(--accent-soft)}
+/* This was .pick.on, stamped server-side: the row lit up on the
+   pre-selection and then never went dark again when it was unticked. */
+.pick:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.pick.out{cursor:default;background:var(--surface)}
+.pick.out:hover{background:var(--surface)}
+.pick.out b{color:var(--ink-2)}
+.pick-tag{margin-left:auto;font-family:var(--mono);font-size:.625rem;
+letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
 .pick input{margin-top:.2rem;flex:none;accent-color:var(--accent)}
 .pick-body{display:flex;flex-direction:column;gap:.15rem;flex:1;min-width:0}
 .pick-body b{font-size:.875rem;color:var(--ink)}
@@ -404,19 +491,191 @@ display:flex;flex-direction:column;gap:.55rem}
 .error p{margin:0;color:var(--ink)}
 .back{font-family:var(--mono);font-size:.75rem}
 .nav{display:flex;gap:1.25rem;font-family:var(--mono);font-size:.75rem}
-.srcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(19rem,1fr));gap:1px;
-background:var(--rule);border:1px solid var(--rule)}
-.src{background:var(--surface);padding:1rem 1.15rem;display:flex;flex-direction:column;gap:.45rem}
-.src .top{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap}
-.src h3{font-family:var(--sans);font-size:1rem;margin:0;font-weight:600}
-.klass{font-family:var(--mono);font-size:.625rem;font-weight:600;letter-spacing:.1em;
-padding:.15rem .45rem;background:var(--accent-soft);color:var(--accent)}
+.health{display:flex;flex-wrap:wrap;gap:0 2.25rem;padding-top:.9rem;
+border-top:2px solid var(--ink)}
+.health-fact{display:flex;flex-direction:column;gap:.15rem;padding:.3rem 0}
+.health-fact span{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+.health-fact b{font-family:var(--mono);font-size:1.0625rem;font-weight:500;
+font-variant-numeric:tabular-nums}
+.health-fact.pass b{color:var(--pass)}
+.health-fact.warn b{color:var(--med)}
+.head-note{margin-left:auto;font-family:var(--mono);font-size:.75rem;color:var(--ink-3)}
+.src-tools{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.src-search{display:flex;align-items:center;gap:.5rem;flex:0 1 20rem;min-width:12rem;
+padding:0 .6rem;height:2.5rem;background:var(--surface);border:1px solid var(--rule-strong)}
+.src-search svg{width:.875rem;height:.875rem;flex:none;fill:none;
+stroke:var(--ink-3);stroke-width:1.6}
+.src-search input{flex:1 1 auto;min-width:0;border:0;background:none;outline:0;
+font-family:var(--mono);font-size:.8125rem;color:var(--ink)}
+.segs{display:flex;gap:.4rem;margin-left:auto}
+.seg{display:inline-flex;align-items:center;gap:.4rem;height:2.5rem;padding:0 .85rem;
+border:1px solid var(--rule);background:var(--surface);color:var(--ink-2);
+font-family:var(--mono);font-size:.78125rem;cursor:pointer}
+.seg.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);
+font-weight:600}
+.seg .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.seg .dot.live{background:var(--pass)}
+.seg .dot.blocked{background:var(--med)}
+.seg .dot.off{background:var(--rule-strong)}
+.src-tools select{font-family:var(--mono);font-size:.78125rem;height:2.5rem;
+padding:0 .6rem;background:var(--surface);color:var(--ink);
+border:1px solid var(--rule-strong)}
+.srclist{border:1px solid var(--rule);background:var(--surface);
+display:flex;flex-direction:column}
+.src-row{display:grid;grid-template-columns:8rem minmax(0,1fr) 14.75rem 12.5rem 9.25rem;
+gap:0 1.25rem;padding:.9rem 1.25rem;align-items:start;
+border-bottom:1px solid var(--rule)}
+.src-row:last-child{border-bottom:0}
+.src-row[hidden]{display:none}
+.src-state{display:flex;flex-direction:column;gap:.3rem;padding-top:.1rem}
+.pill{align-self:flex-start;font-family:var(--mono);font-size:.625rem;font-weight:600;
+letter-spacing:.11em;text-transform:uppercase;padding:.2rem .5rem}
+.pill.live{background:var(--pass-soft);color:var(--pass)}
+.pill.blocked{background:var(--med-soft);color:var(--med)}
+.pill.off{background:var(--surface-2);color:var(--ink-2)}
+.src-row .sub{font-family:var(--mono);font-size:.625rem;color:var(--ink-3);
+line-height:1.35}
+.src-row .sub.warn{color:var(--med)}
+.src-id{display:flex;flex-direction:column;gap:.2rem;min-width:0}
+.src-id h3{font-family:var(--sans);font-size:.9375rem;font-weight:600;margin:0;
+line-height:1.3}
+.src-id p{margin:0;font-size:.8125rem;color:var(--ink-2);line-height:1.45}
+.url-row{display:flex;align-items:baseline;gap:.5rem;min-width:0}
+/* The template is often longer than the column. It stays on one line so the
+   rows keep their rhythm, but a double-click takes all of it, and the button
+   takes it without one. */
+.src-id .url{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:all;
+flex:0 1 auto;min-width:0}
+.copy{flex:none;font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;
+text-transform:uppercase;padding:.1rem .4rem;background:none;color:var(--ink-3);
+border:1px solid var(--rule);cursor:pointer}
+.copy:hover{border-color:var(--accent);color:var(--accent)}
+.copy.done{border-color:var(--pass);color:var(--pass)}
+.src-klass{display:flex;gap:.6rem;align-items:flex-start}
+.klass{display:grid;place-items:center;width:1.5rem;height:1.5rem;flex:none;
+font-family:var(--mono);font-size:.75rem;font-weight:600;
+background:var(--accent-soft);color:var(--accent)}
 .klass.low{background:var(--surface-2);color:var(--ink-3)}
-.src p{margin:0;font-size:.875rem;color:var(--ink-2)}
-.src .url{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
-word-break:break-all;line-height:1.45}
-.src .cover{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
-.src .cover.warn{color:var(--med)}
+.src-klass-body{display:flex;flex-direction:column;gap:.1rem;line-height:1.3}
+.src-klass-body b{font-family:var(--sans);font-size:.8125rem;font-weight:600}
+.src-keyed{display:flex;flex-direction:column;gap:.25rem;line-height:1.3}
+.keyed{align-self:flex-start;font-family:var(--mono);font-size:.625rem;font-weight:600;
+letter-spacing:.08em;padding:.125rem .4rem;background:var(--surface-2);color:var(--ink-2)}
+.src-file{display:flex;flex-direction:column;gap:.2rem;align-items:flex-end;
+text-align:right}
+.pager{display:flex;align-items:center;gap:.9rem;padding:.7rem 1.25rem;
+border:1px solid var(--rule);border-top:0}
+.pager.compact{border:0;border-top:1px solid var(--rule);padding:.7rem 0}
+.pager .sub{font-family:var(--mono);font-size:.71875rem;color:var(--ink-3);
+font-variant-numeric:tabular-nums}
+.pg-right{margin-left:auto;display:flex;align-items:center;gap:.65rem}
+.pg-right label{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);
+font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.pg-right select{font-family:var(--mono);font-size:.78125rem;height:2.125rem;
+padding:0 .5rem;background:var(--surface);color:var(--ink);
+border:1px solid var(--rule-strong);text-transform:none;letter-spacing:0}
+form.cadence{display:flex;align-items:center;gap:.35rem}
+form.cadence select{font-family:var(--mono);font-size:.75rem;padding:.25rem .35rem;
+background:var(--surface);color:var(--ink);border:1px solid var(--rule-strong)}
+form.cadence button{font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;
+text-transform:uppercase;padding:.25rem .45rem;background:none;color:var(--ink-3);
+border:1px solid var(--rule);cursor:pointer}
+form.cadence button:hover{border-color:var(--accent);color:var(--accent)}
+.count-line{margin:0;font-family:var(--mono);font-size:.75rem;color:var(--ink-3)}
+/* -- top bar, help, tour, settings ------------------------------------- */
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:.9rem;
+padding:.55rem 1.5rem;background:var(--paper);border-bottom:1px solid var(--rule)}
+.bar-button{display:inline-flex;align-items:center;gap:.4rem;height:2rem;
+padding:0 .65rem;font-family:var(--mono);font-size:.75rem;background:none;
+color:var(--ink-2);border:1px solid var(--rule);cursor:pointer}
+.bar-button:hover{border-color:var(--accent);color:var(--accent)}
+.bar-button svg{width:.875rem;height:.875rem;fill:none;stroke:currentColor;
+stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.crumbs-bar{display:flex;align-items:baseline;gap:.45rem;font-family:var(--mono);
+font-size:.75rem;color:var(--ink-3);min-width:0}
+.crumbs-bar b{color:var(--ink);font-weight:600}
+.crumb-sep{color:var(--rule-strong)}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:.5rem}
+.ico-moon{display:none}
+:root[data-theme="dark"] .ico-sun{display:none}
+:root[data-theme="dark"] .ico-moon{display:inline-block}
+.brand-row{display:flex;align-items:center;gap:.5rem}
+.brand-row .brand{flex:1 1 auto;min-width:0}
+.brand-row .nav-toggle{width:auto;flex:none;padding:.35rem}
+.brand-row .nav-toggle .nav-label{display:none}
+a.account{text-decoration:none;color:inherit}
+a.account:hover{background:var(--surface-2)}
+.help{position:fixed;right:1.5rem;bottom:1.5rem;z-index:60;display:flex;
+flex-direction:column;align-items:flex-end;gap:.6rem}
+.help-button{display:grid;place-items:center;width:3rem;height:3rem;border-radius:50%;
+background:var(--accent);color:var(--paper);border:0;cursor:pointer;
+box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.help-button svg{width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;
+stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.help-panel{width:21rem;max-width:calc(100vw - 3rem);max-height:60vh;overflow:auto;
+background:var(--surface);border:1px solid var(--rule);padding:1rem 1.1rem;
+box-shadow:0 12px 32px rgba(0,0,0,.24)}
+.help-head{display:flex;align-items:center;margin-bottom:.5rem}
+.help-head b{font-family:var(--sans);font-size:.9375rem}
+.help-close{margin-left:auto;background:none;border:0;color:var(--ink-3);
+font-size:1.1rem;line-height:1;cursor:pointer;padding:0 .2rem}
+.help-panel p{margin:0 0 .6rem;font-size:.8125rem;color:var(--ink-2);line-height:1.5}
+.help-panel ul{margin:0 0 .6rem;padding-left:1.05rem;font-size:.8125rem;
+color:var(--ink-2);line-height:1.5}
+.help-panel li{margin-bottom:.35rem}
+.help-foot{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.tour-ring{position:absolute;z-index:70;pointer-events:none;
+border:2px solid var(--accent);box-shadow:0 0 0 9999px rgba(4,8,14,.55)}
+.tour-box{position:absolute;z-index:71;width:20rem;max-width:calc(100vw - 2rem);
+background:var(--surface);border:1px solid var(--rule-strong);padding:.9rem 1rem;
+box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.tour-title{font-family:var(--sans);font-size:.9375rem;font-weight:600;display:block}
+.tour-text{margin:.35rem 0 .75rem;font-size:.8125rem;color:var(--ink-2);line-height:1.5}
+.tour-foot{display:flex;align-items:center;gap:.5rem}
+.tour-count{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+margin-right:auto}
+.tour-skip,.tour-next{font-family:var(--mono);font-size:.75rem;padding:.35rem .7rem;
+border:1px solid var(--rule);background:none;color:var(--ink-2);cursor:pointer}
+.tour-next{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));
+gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.setting{background:var(--surface);padding:1rem 1.15rem;display:flex;
+flex-direction:column;gap:.3rem}
+.setting span{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+.setting b{font-family:var(--mono);font-size:.875rem;font-weight:500;word-break:break-all}
+
+.pg-arrows{display:flex;gap:.4rem}
+.pg-arrow{display:grid;place-items:center;width:2.125rem;height:2.125rem;
+border:1px solid var(--rule);background:var(--surface)}
+.pg-arrow svg{width:.8125rem;height:.8125rem;fill:none;stroke:var(--rule-strong);
+stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.maptable th b{display:block;font-family:var(--sans);font-size:.8125rem;font-weight:600}
+.maptable th .sub{font-family:var(--mono);font-size:.625rem;color:var(--ink-3);
+text-transform:none;letter-spacing:0;font-weight:400}
+.srcband{display:grid;grid-template-columns:repeat(auto-fit,minmax(24rem,1fr));gap:2.5rem;
+align-items:start}
+.fieldset{display:flex;flex-direction:column;gap:.6rem;padding-bottom:1.1rem;
+border-bottom:1px solid var(--rule)}
+.fieldset:last-of-type{border-bottom:0}
+.fieldset>.sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+line-height:1.5}
+.fieldset>.sub code{font-family:var(--mono);font-size:.6875rem;color:var(--ink-2)}
+.fields{display:grid;grid-template-columns:minmax(0,1fr);gap:.75rem}
+.fields.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rows{display:flex;flex-direction:column;gap:.55rem}
+.rows .field{display:grid;grid-template-columns:11.5rem minmax(0,1fr);
+align-items:center;gap:1rem}
+.field{display:flex;flex-direction:column;gap:.3rem}
+.field label{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+/* input[type=text] carries flex:1 1 9rem for the scan form's row. In this
+   column that basis is read as a height, so every box grew to 144px. */
+.field input,.field select,.field textarea{flex:none}
+.field .req{color:var(--high);padding-left:.15rem}
+.add-actions{display:flex;padding-top:.4rem}
 .presets{display:flex;flex-wrap:wrap;gap:.5rem}
 .preset{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--rule);
 background:var(--surface);padding:.35rem .4rem .35rem .6rem;font-family:var(--mono);
@@ -464,15 +723,11 @@ border:1px solid var(--rule);background:var(--surface);font-size:.875rem;color:v
 .delta .new{color:var(--med)}
 .delta .gone{color:var(--pass)}
 .delta .quiet{color:var(--ink-3);font-family:var(--mono);font-size:.75rem}
-form.add{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.9rem;
-padding-top:1.1rem;border-top:2px solid var(--ink)}
-form.add label{display:flex;flex-direction:column;gap:.3rem;font-family:var(--mono);
-font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+form.add{display:flex;flex-direction:column;gap:1.1rem}
 form.add input,form.add select,form.add textarea{font-family:var(--mono);font-size:.8125rem;
 padding:.55rem .6rem;background:var(--surface);color:var(--ink);
 border:1px solid var(--rule-strong);text-transform:none;width:100%}
 form.add textarea{min-height:5rem;resize:vertical}
-form.add .wide{grid-column:1/-1}
 .flash{padding:.9rem 1.1rem;border-left:3px solid var(--pass);background:var(--pass-soft);
 font-size:.9375rem}
 .flash.bad{border-left-color:var(--high);background:var(--high-soft)}
@@ -569,11 +824,13 @@ def _sidebar(current: str = "") -> str:
               f'<path d="{CHEVRON_R}"/></svg>'
               f'<span class="nav-label">Collapse</span></button>')
 
-    return (f'<aside class="sidebar"><a class="brand" href="/">'
-            f'<span class="brand-mark">CT</span>'
-            f'<span class="brand-name nav-label">Contour</span></a>'
+    # The toggle sits with the brand rather than at the foot: it acts on the
+    # rail, and the reader looks for it where the rail begins.
+    return (f'<aside class="sidebar"><div class="brand-row">'
+            f'<a class="brand" href="/"><span class="brand-mark">CT</span>'
+            f'<span class="brand-name nav-label">Contour</span></a>{toggle}</div>'
             f'<nav class="nav-list">{"".join(blocks)}</nav>'
-            f'<div class="sidebar-foot">{toggle}{_account()}</div></aside>')
+            f'<div class="sidebar-foot">{_account()}</div></aside>')
 
 
 def _account() -> str:
@@ -586,11 +843,236 @@ def _account() -> str:
     name = os.environ.get("CONTOUR_USER_NAME", "").strip() or "Account"
     detail = os.environ.get("CONTOUR_USER_EMAIL", "").strip() or "Local workspace"
     initials = "".join(part[0] for part in name.split()[:2] if part).upper() or "A"
-    return (f'<div class="account"><span class="avatar" aria-hidden="true">'
+    return (f'<a class="account" href="/settings"><span class="avatar" aria-hidden="true">'
             f"{esc(initials)}</span>"
             f'<span class="account-text"><b>{esc(name)}</b>'
-            f"<small>{esc(detail)}</small></span></div>")
+            f"<small>{esc(detail)}</small></span></a>")
 
+
+
+# What each page's tour walks through. A step is (selector, heading, body); a
+# selector that matches nothing is skipped rather than shown against an empty
+# box, so a page that renders an empty state does not tour its missing parts.
+TOURS: dict[str, list[tuple[str, str, str]]] = {
+    "/": [
+        (".factbar", "The ledger so far",
+         "Every figure Contour has read from a filing, and how many companies "
+         "and periods they cover."),
+        (".nav-list", "Two kinds of page",
+         "Analyse reads companies. Manage decides what gets read and from where."),
+    ],
+    "/scan": [
+        ("form.scan", "One company",
+         "Any of the ~10,400 SEC-registered tickers. Every figure on the report "
+         "is computed from a filing fetched now and cites the accession."),
+        (".wl", "Your watchlist",
+         "Companies with a baseline. Scanning one of these diffs against it; "
+         "scanning anything else is a first reading with nothing to compare."),
+    ],
+    "/compare": [
+        (".picker", "Two sides",
+         "Pick a company on each side. Whichever you pick is disabled on the "
+         "other — a company compared with itself is a comparison of nothing."),
+        (".commit", "What you will get",
+         "One row per check, over the union of both rosters, so a check that "
+         "ran on one side and not the other reads across in a glance."),
+    ],
+    "/tracked": [
+        (".maptable", "What has accumulated",
+         "When each baseline was taken, and what the ledger has picked up since."),
+        ("form.cadence", "How often to revisit",
+         "The background pass skips companies that are not due. Manual only "
+         "keeps the baseline without ever revisiting it on a timer."),
+    ],
+    "/sources": [
+        (".health", "What can actually run",
+         "Live, blocked and off are different states. A source switched off is "
+         "a choice; one missing its key is a gap."),
+        (".src-tools", "Finding one",
+         "Filter by name, host or file, or narrow to a state or a class."),
+        ("#mappings", "Names, typed by hand",
+         "Sources not keyed on CIK need to be told how a company is named in "
+         "them. A company with no line here reports as not applicable."),
+    ],
+    "/add": [
+        (".picks", "The roster is yours",
+         "Contour filters to what can run, then ranks. Nothing is saved until "
+         "you confirm, and anything ruled out says why."),
+    ],
+}
+
+
+def _tour(current: str) -> str:
+    steps = TOURS.get(current) or []
+    if not steps:
+        return ""
+    payload = "".join(
+        f'<template data-tour-step data-target="{esc(sel)}" '
+        f'data-title="{esc(title)}">{esc(text)}</template>'
+        for sel, title, text in steps)
+    return (f'<button class="bar-button" type="button" data-tour-start>'
+            f'<svg viewBox="0 0 20 20" aria-hidden="true">'
+            f'<circle cx="10" cy="10" r="7"/><path d="M10 9v4.5M10 6.6v.1"/></svg>'
+            f'Tour this page</button>{payload}')
+
+
+def _topbar(current: str, title: str) -> str:
+    """Where you are, how to get back, and the controls that follow you around."""
+    name = next((n for href, n, _, _ in NAV_ITEMS if href == current), "")
+    group = next((g for href, _, _, g in NAV_ITEMS if href == current), "")
+    crumbs = (f'<span class="crumb-group">{esc(group)}</span>'
+              f'<span class="crumb-sep">/</span><b>{esc(name)}</b>'
+              if name else f"<b>{esc(title)}</b>")
+    return f"""<div class="topbar">
+<button class="bar-button back" type="button" data-back
+        aria-label="Back to the previous page">
+<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4 6 10l6 6"/></svg>Back</button>
+<div class="crumbs-bar">{crumbs}</div>
+<div class="bar-right">{_tour(current)}
+<button class="bar-button theme" type="button" data-theme-toggle
+        aria-label="Switch between light and dark">
+<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-sun"><circle cx="10" cy="10" r="3.6"/>
+<path d="M10 2.4v1.8M10 15.8v1.8M2.4 10h1.8M15.8 10h1.8M4.6 4.6l1.3 1.3M14.1 14.1l1.3 1.3M15.4 4.6l-1.3 1.3M5.9 14.1l-1.3 1.3"/></svg>
+<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-moon">
+<path d="M16 11.7A6.4 6.4 0 0 1 8.3 4a6.6 6.6 0 1 0 7.7 7.7"/></svg>
+<span data-theme-label>System</span></button></div>
+</div>"""
+
+
+HELP_BUBBLE = """<div class="help">
+<div class="help-panel" id="help-panel" hidden>
+<div class="help-head"><b>Help</b>
+<button type="button" class="help-close" data-help-close aria-label="Close help">&times;</button></div>
+<p>Contour reads primary filings and reports what moved between two of them.
+Nothing on a page is a model's opinion: every figure cites the accession it
+came from.</p>
+<ul>
+<li><b>Tour this page</b> in the bar above walks through what you are looking at.</li>
+<li>A check can be <b>clean</b>, <b>not applicable</b>, or <b>unavailable</b>.
+Those are three different answers and never share a treatment.</li>
+<li><b>VERIFIED</b> means a Class-A primary source matched the company by CIK.
+Anything else reads <b>REPORTED</b>.</li>
+</ul>
+<p class="help-foot">This panel is written into the page — there is nobody on
+the other end of it.</p>
+</div>
+<button class="help-button" type="button" data-help-toggle aria-expanded="false"
+        aria-controls="help-panel" aria-label="Open help">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-5 4z"/>
+<path d="M9.6 8.4a2.4 2.4 0 1 1 2.9 2.4v1.1M12.4 13.9v.1"/></svg>
+</button></div>"""
+
+
+CHROME_SCRIPT = """<script>
+(function () {
+  var root = document.documentElement;
+  // -- theme: system, then light, then dark. System is a real state, not the
+  // absence of one, so it is stamped and labelled like the other two.
+  var order = ['system', 'light', 'dark'];
+  function readTheme() {
+    try { return localStorage.getItem('contour-theme') || 'system'; } catch (e) { return 'system'; }
+  }
+  function paintTheme(mode) {
+    if (mode === 'system') { delete root.dataset.theme; }
+    else { root.dataset.theme = mode; }
+    document.querySelectorAll('[data-theme-label]').forEach(function (el) {
+      el.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+    });
+    root.dataset.themeChoice = mode;
+  }
+  paintTheme(readTheme());
+  document.addEventListener('click', function (ev) {
+    if (ev.target.closest('[data-theme-toggle]')) {
+      var next = order[(order.indexOf(readTheme()) + 1) % order.length];
+      try { localStorage.setItem('contour-theme', next); } catch (e) {}
+      paintTheme(next);
+      return;
+    }
+    if (ev.target.closest('[data-back]')) {
+      // No history to go back to on a fresh tab: fall back to Overview rather
+      // than leaving a control that does nothing.
+      if (history.length > 1) { history.back(); } else { location.href = '/'; }
+      return;
+    }
+    var helpHit = ev.target.closest('[data-help-toggle]');
+    if (helpHit) {
+      var panel = document.getElementById('help-panel');
+      var open = panel.hasAttribute('hidden');
+      if (open) { panel.removeAttribute('hidden'); } else { panel.setAttribute('hidden', ''); }
+      helpHit.setAttribute('aria-expanded', open ? 'true' : 'false');
+      return;
+    }
+    if (ev.target.closest('[data-help-close]')) {
+      document.getElementById('help-panel').setAttribute('hidden', '');
+      var btn = document.querySelector('[data-help-toggle]');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    if (ev.target.closest('[data-tour-start]')) { startTour(); }
+  });
+
+  // -- the tour ---------------------------------------------------------
+  var steps = [], at = -1, box = null, ring = null;
+  function collect() {
+    steps = [];
+    document.querySelectorAll('[data-tour-step]').forEach(function (t) {
+      var node = document.querySelector(t.getAttribute('data-target'));
+      // A <template>'s children live in .content, so textContent on the tag
+      // itself is always empty — that shipped once as a tour with no prose.
+      var text = t.content ? t.content.textContent : t.textContent;
+      if (node) steps.push({node: node, title: t.getAttribute('data-title'), text: text});
+    });
+  }
+  function frame() {
+    if (box) return;
+    ring = document.createElement('div');
+    ring.className = 'tour-ring';
+    box = document.createElement('div');
+    box.className = 'tour-box';
+    box.innerHTML = '<b class="tour-title"></b><p class="tour-text"></p>' +
+      '<div class="tour-foot"><span class="tour-count"></span>' +
+      '<button type="button" class="tour-skip">Close</button>' +
+      '<button type="button" class="tour-next">Next</button></div>';
+    document.body.append(ring, box);
+    box.querySelector('.tour-skip').addEventListener('click', stop);
+    box.querySelector('.tour-next').addEventListener('click', function () { show(at + 1); });
+  }
+  function show(i) {
+    if (i >= steps.length) { stop(); return; }
+    at = i;
+    var step = steps[i];
+    step.node.scrollIntoView({block: 'center', behavior: 'smooth'});
+    var r = step.node.getBoundingClientRect();
+    ring.style.top = (r.top + window.scrollY - 6) + 'px';
+    ring.style.left = (r.left + window.scrollX - 6) + 'px';
+    ring.style.width = (r.width + 12) + 'px';
+    ring.style.height = (r.height + 12) + 'px';
+    box.querySelector('.tour-title').textContent = step.title;
+    box.querySelector('.tour-text').textContent = step.text;
+    box.querySelector('.tour-count').textContent = (i + 1) + ' of ' + steps.length;
+    box.querySelector('.tour-next').textContent = i === steps.length - 1 ? 'Done' : 'Next';
+    var top = r.bottom + window.scrollY + 14;
+    box.style.top = top + 'px';
+    box.style.left = Math.max(16, Math.min(r.left + window.scrollX,
+      window.innerWidth - 340)) + 'px';
+    ring.hidden = false; box.hidden = false;
+  }
+  function stop() {
+    if (ring) ring.hidden = true;
+    if (box) box.hidden = true;
+    at = -1;
+  }
+  function startTour() {
+    collect();
+    if (!steps.length) return;
+    frame();
+    show(0);
+  }
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') stop();
+  });
+})();
+</script>"""
 
 NAV_SCRIPT = """<script>
 (function () {
@@ -618,20 +1100,81 @@ def _page(title: str, body: str, current: str = "") -> bytes:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title>{FONTS}
 <style>{CSS}{_EXTRA_CSS}</style></head><body>
-<div class="app">{_sidebar(current)}<main class="main"><div class="shell">{body}</div></main></div>
-{_VEIL}{NAV_SCRIPT}</body></html>""".encode()
+<div class="app">{_sidebar(current)}<main class="main">{_topbar(current, title.split(" — ")[0])}
+<div class="shell">{body}</div></main></div>
+{HELP_BUBBLE}{_VEIL}{NAV_SCRIPT}{CHROME_SCRIPT}</body></html>""".encode()
 
 
-def _form(primary: str = "", secondary: str = "") -> str:
+def _form(primary: str = "") -> str:
+    """One company, one report.
+
+    This used to carry a second "Compare (optional)" field, which made /scan and
+    /compare the same screen under different headings. Comparison is its own
+    surface now, so the field that blurred them is gone.
+    """
     return f"""<form class="scan" method="get" action="/scan">
 <input type="text" name="a" placeholder="Ticker" value="{esc(primary)}"
        autocomplete="off" autofocus required>
-<span class="vs">vs</span>
-<input type="text" name="b" placeholder="Compare (optional)" value="{esc(secondary)}"
-       autocomplete="off">
 <button type="submit">Scan</button>
+<span class="form-note">one company · full report</span>
 </form>"""
 
+
+
+def _tracked() -> list:
+    """Tracked companies, newest scan first. Chrome must never take a page down."""
+    try:
+        with connect() as connection:
+            return list(tracked_companies(connection))
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _watchlist_table() -> str:
+    rows = _tracked()
+    if not rows:
+        return ('<p class="note">Nothing tracked yet. Scan a company, then take a '
+                "baseline to start watching it.</p>")
+    body = ""
+    for t in rows:
+        added = t.facts_now - t.baseline_facts
+        if added > 0:
+            delta = f'<span class="chip warn">+{added:,} figures</span>'
+        else:
+            delta = '<span class="chip">no change</span>'
+        body += (f'<tr><td class="tk">{esc(t.ticker)}</td>'
+                 f"<td>{esc(t.company)}</td>"
+                 f'<td class="sub">{esc(t.last_scan or "—")}</td>'
+                 f'<td class="num">{t.scans:,}</td>'
+                 f'<td class="num">{t.baseline_facts:,}</td>'
+                 f"<td>{delta}</td>"
+                 f'<td class="go"><a href="/scan?a={esc(t.ticker)}">Scan ›</a></td></tr>')
+    return (f'<div class="wl"><table><thead><tr><th scope="col">Ticker</th>'
+            f'<th scope="col">Company</th><th scope="col">Last scan</th>'
+            f'<th scope="col" class="num">Scans</th>'
+            f'<th scope="col" class="num">Baseline figures</th>'
+            f'<th scope="col">Since last scan</th><th scope="col"></th></tr></thead>'
+            f"<tbody>{body}</tbody></table></div>")
+
+
+def _recent_chips() -> str:
+    """Scanned lately but not tracked — the only thing the watchlist cannot show."""
+    tracked = {t.ticker for t in _tracked()}
+    seen: list[str] = []
+    try:
+        with connect() as connection:
+            for row in scan_history(connection, limit=12):
+                if row["ticker"] not in tracked and row["ticker"] not in seen:
+                    seen.append(row["ticker"])
+    except Exception:  # noqa: BLE001
+        return ""
+    if not seen:
+        return ""
+    links = "".join(
+        f'<a class="chip-link" href="/scan?a={esc(t)}"><b>{esc(t)}</b> · not tracked</a>'
+        for t in seen[:8])
+    return (f'<section class="check"><div class="check-head"><h2>Recently scanned</h2></div>'
+            f'<div class="chips">{links}</div></section>')
 
 def _suggestions() -> str:
     """Quick access to tracked companies, then recently scanned ones.
@@ -1170,7 +1713,8 @@ def _error(ticker: str, message: str) -> str:
 <p>{esc(hint)}</p><ul><li><b>{esc(message[:180])}</b></li></ul></div></div>"""
 
 
-def results(client: EdgarClient, tickers: list[str], notice: str = "") -> bytes:
+def results(client: EdgarClient, tickers: list[str], notice: str = "",
+            compare: bool = False) -> bytes:
     """Scan one or two companies; a second runs concurrently with the first."""
     def one(ticker: str):
         started = time.monotonic()
@@ -1198,14 +1742,22 @@ def results(client: EdgarClient, tickers: list[str], notice: str = "") -> bytes:
     banner = f'<div class="notice">{esc(notice)}</div>' if notice else ""
     # A report is a reading surface, not a launcher: the form folds away behind
     # one control instead of taking the first screen on every scan.
-    body = f"""<details class="switcher">
+    if compare:
+        switcher = (f'<a class="head-link" href="/compare?a={esc(tickers[0])}'
+                    f'&amp;b={esc(tickers[1] if len(tickers) > 1 else "")}">'
+                    "Change the pair ›</a>")
+        opener = f'<div class="switcher-line">{switcher}</div>'
+    else:
+        opener = f"""<details class="switcher">
 <summary>Scan another company</summary>
-{_form(*(tickers + [""])[:2])}
+{_form(tickers[0] if tickers else "")}
 {_suggestions()}
-</details>
+</details>"""
+    body = f"""{opener}
 {banner}
 <div class="{'wide' if comparing else 'columns'}">{columns}</div>"""
-    return _page(f"{names} — Contour", body, current="/scan")
+    return _page(f"{names} — Contour", body,
+                 current="/compare" if compare else "/scan")
 
 
 _FIELDS = [
@@ -1220,24 +1772,186 @@ _FIELDS = [
     ("match", "Entity-gate field", "text", "title", False),
 ]
 
+# The declare form groups these by purpose rather than by declaration order, so
+# it needs to reach a field by name.
+_FIELD_BY_KEY = {key: rest for key, *rest in _FIELDS}
 
-def _source_card(source: CustomSource) -> str:
-    low = source.klass.letter not in ("A", "B")
-    flags = []
+
+
+# Like the compare picker, the list is correct without this: every row is in
+# the page and readable. Filtering is a convenience for a long sources file.
+SOURCES_SCRIPT = """<script>
+(function(){
+  var list = document.getElementById('srclist');
+  if (!list) return;
+  var search = document.getElementById('src-filter');
+  var klass = document.getElementById('src-class');
+  var segs = document.querySelectorAll('.src-tools .seg');
+  var state = 'all';
+  function apply(){
+    var term = search ? search.value.trim().toLowerCase() : '';
+    var want = klass ? klass.value : 'all';
+    var shown = 0;
+    list.querySelectorAll('.src-row').forEach(function(row){
+      var hit = (!term || row.textContent.toLowerCase().indexOf(term) !== -1)
+        && (state === 'all' || row.getAttribute('data-state') === state)
+        && (want === 'all' || row.getAttribute('data-klass') === want);
+      row.hidden = !hit;
+      if (hit) shown++;
+    });
+    var pager = list.parentElement.querySelector('.pager .sub');
+    if (pager) {
+      pager.textContent = 'Showing 1\u2013' + shown + ' of '
+        + list.querySelectorAll('.src-row').length;
+    }
+  }
+  segs.forEach(function(seg){
+    seg.addEventListener('click', function(){
+      segs.forEach(function(o){ o.classList.remove('on'); });
+      seg.classList.add('on');
+      state = seg.getAttribute('data-filter');
+      apply();
+    });
+  });
+  if (search) search.addEventListener('input', apply);
+  if (klass) klass.addEventListener('change', apply);
+  document.querySelectorAll('.copy').forEach(function(button){
+    button.addEventListener('click', function(){
+      var url = button.getAttribute('data-copy');
+      var done = function(){
+        var was = button.textContent;
+        button.textContent = 'copied';
+        button.classList.add('done');
+        setTimeout(function(){
+          button.textContent = was;
+          button.classList.remove('done');
+        }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, select);
+      } else {
+        select();
+      }
+      // No clipboard permission: select the text so the reader can copy it
+      // themselves rather than leaving the button silently dead.
+      function select(){
+        var span = button.previousElementSibling;
+        var range = document.createRange();
+        range.selectNodeContents(span);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+  });
+})();
+</script>"""
+
+def _source_state(source: CustomSource) -> tuple[str, str, list[str]]:
+    """Live, Blocked or Off — and never two of them at once.
+
+    These used to be one string ("disabled · needs USPTO_API_KEY"), which made a
+    source switched off on purpose look identical to one Contour expects to run
+    and cannot. They are different situations: a deliberate off-switch is a
+    choice, a missing key is a gap. Once a source is off the key stops mattering,
+    so `disabled` wins and the key note is demoted rather than dropped.
+    """
+    key_note = ("needs " + ", ".join(source.missing_env)) if source.missing_env else ""
     if not source.enabled:
-        flags.append("disabled")
+        notes = ["disabled in TOML"]
+        notes.append(f"{key_note} — not consulted" if key_note else "key present")
+        return "off", "Off", notes
     if source.missing_env:
-        flags.append("needs " + ", ".join(source.missing_env))
-    state = f'<span class="cover warn">{esc(" · ".join(flags))}</span>' if flags else ""
-    return f"""<div class="src">
-<div class="top"><h3>{esc(source.name)}</h3>
-<span class="klass {'low' if low else ''}">Class {source.klass.letter}</span>
-<span class="cover">{esc(source.kind)}</span>{state}</div>
+        return "blocked", "Blocked", ["enabled in TOML", key_note]
+    return "live", "Live", []
+
+
+def _source_row(source: CustomSource) -> str:
+    low = source.klass.letter not in ("A", "B")
+    state, label, notes = _source_state(source)
+    note_html = "".join(
+        f'<span class="sub{" warn" if state == "blocked" and i else ""}">{esc(n)}</span>'
+        for i, n in enumerate(notes))
+    keyed = "CIK" if not source.needs_entity else "NAME"
+    return f"""<div class="src-row" data-state="{state}" data-klass="{source.klass.letter}">
+<div class="src-state"><span class="pill {state}">{esc(label)}</span>{note_html}</div>
+<div class="src-id"><h3>{esc(source.name)}</h3>
 {f'<p>{esc(source.note)}</p>' if source.note else ''}
-<span class="cover">{esc(source.coverage)}</span>
-<span class="url">{esc(source.url)}</span>
-<span class="cover">{esc(source.path.name if source.path else "")}</span>
+<span class="url-row"><span class="url" title="{esc(source.url)}">{esc(source.url)}</span>
+<button type="button" class="copy" data-copy="{esc(source.url)}"
+        aria-label="Copy the URL for {esc(source.name)}">copy</button></span></div>
+<div class="src-klass"><span class="klass {'low' if low else ''}">{source.klass.letter}</span>
+<span class="src-klass-body"><b>{esc(source.klass.label)}</b>
+<span class="sub">{"can mark findings verified" if source.klass.letter == "A"
+                  else "corroborates · never verifies"}</span></span></div>
+<div class="src-keyed"><span class="keyed">{keyed}</span>
+<span class="sub">{esc(source.coverage)}</span></div>
+<div class="src-file"><span class="sub">{esc(source.path.name if source.path else "")}</span>
+<span class="sub">{esc(source.kind)}</span></div>
 </div>"""
+
+
+def _source_health(sources) -> str:
+    """What the page is for: how many sources can actually run right now."""
+    states = [_source_state(s)[0] for s in sources]
+    live = states.count("live")
+    blocked = states.count("blocked")
+    off = states.count("off")
+    a_total = [s for s in sources if s.klass.letter == "A"]
+    a_live = sum(1 for s in a_total if _source_state(s)[0] == "live")
+    facts = [("Declared", f"{len(sources)}", "")]
+    facts.append(("Live", f"{live}", "pass"))
+    if blocked:
+        facts.append(("Blocked", f"{blocked}", "warn"))
+    if off:
+        facts.append(("Off", f"{off}", ""))
+    if a_total:
+        facts.append(("Class A live", f"{a_live} of {len(a_total)}", ""))
+    return '<div class="health">' + "".join(
+        f'<div class="health-fact {tone}"><span>{esc(label)}</span><b>{esc(value)}</b></div>'
+        for label, value, tone in facts) + "</div>"
+
+
+def _source_toolbar(sources) -> str:
+    states = [_source_state(s)[0] for s in sources]
+    letters = sorted({s.klass.letter for s in sources})
+    segs = "".join(
+        f'<span class="seg{" on" if key == "all" else ""}" data-filter="{key}">'
+        f'{"" if key == "all" else f"<i class=\'dot {key}\'></i>"}{esc(name)} '
+        f"<b>{count}</b></span>"
+        for key, name, count in (("all", "All", len(sources)),
+                                 ("live", "Live", states.count("live")),
+                                 ("blocked", "Blocked", states.count("blocked")),
+                                 ("off", "Off", states.count("off")))
+        if count or key in ("all", "live"))
+    options = "".join(f'<option value="{esc(l)}">Class {esc(l)}</option>' for l in letters)
+    return f"""<div class="src-tools">
+<label class="src-search">
+<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.2"/>
+<path d="M12.8 12.8 17 17"/></svg>
+<input type="search" id="src-filter" placeholder="Filter by name, host or file"
+       autocomplete="off" aria-label="Filter sources">
+</label>
+<div class="segs">{segs}</div>
+<select id="src-class" aria-label="Filter by reliability class">
+<option value="all">All classes</option>{options}</select>
+</div>"""
+
+
+def _pager(shown: int, total: int, unit: str, compact: bool = False) -> str:
+    """Every list on this page ends the same way, so none of them can grow
+    without the reader being told how much they are not seeing."""
+    per = ("" if compact else
+           '<label>Per page<select aria-label="Rows per page">'
+           "<option>25</option><option>50</option><option>100</option></select></label>")
+    arrow = ('<span class="pg-arrow" aria-disabled="true">'
+             '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="%s"/></svg></span>')
+    return (f'<div class="pager{" compact" if compact else ""}">'
+            f'<span class="sub">Showing 1–{shown:,} of {total:,}{" " + unit if unit else ""}</span>'
+            f'<div class="pg-right">{per}'
+            f'<div class="pg-arrows">{arrow % "M12.5 4 7 10l5.5 6"}'
+            f'{arrow % "M7.5 4 13 10l-5.5 6"}</div>'
+            f'<span class="sub">Page 1 of 1</span></div></div>')
 
 
 def _preset_chips() -> str:
@@ -1267,12 +1981,28 @@ def _mapping_inputs(sources) -> str:
 
 
 def _mapping_table(sources) -> str:
+    """The columns *are* the sources, so each one carries its class.
+
+    Split across the page these read as unrelated configuration; a company with
+    no line here is why an entity-keyed source reports not applicable.
+    """
     entities, _ = load_entities()
     keys = _mapped_keys(sources)
+    by_name = {s.name: s for s in sources}
     if not entities:
         return ('<p class="note">No company mappings yet. Built-in NHTSA makes and '
                 "any entities declared in a source file still apply.</p>")
-    head = "".join(f"<th scope='col'>{esc(label)}</th>" for _, label in keys)
+    head = ""
+    for key, label in keys:
+        source = by_name.get(key)
+        if source is None:
+            tag = '<span class="sub">built in</span>'
+        else:
+            state = _source_state(source)[0]
+            tag = (f'<span class="sub">Class {esc(source.klass.letter)}'
+                   f'{" · blocked" if state == "blocked" else ""}'
+                   f'{" · off" if state == "off" else ""}</span>')
+        head += f"<th scope='col'><b>{esc(label)}</b>{tag}</th>"
     rows = ""
     for ticker in sorted(entities):
         cells = ""
@@ -1282,17 +2012,24 @@ def _mapping_table(sources) -> str:
                       else '<td class="none">—</td>')
         rows += f'<tr><td class="tk">{esc(ticker)}</td>{cells}</tr>'
     return (f'<div class="maptable"><table><thead><tr><th scope="col">Ticker</th>'
-            f"{head}</tr></thead><tbody>{rows}</tbody></table></div>")
+            f"{head}</tr></thead><tbody>{rows}</tbody></table></div>"
+            + _pager(len(entities), len(entities), "companies"))
 
 
 def sources_page(message: str = "", error: str = "") -> bytes:
+    """Sources first, then what they need to run.
+
+    The declared sources used to sit unlabelled in the middle of the page,
+    below two configuration sections. They are the subject; the configuration
+    exists to serve them.
+    """
     sources, problems = load_sources()
     problems = problems + load_presets()[1]
-    preset_chips = _preset_chips()
+    presets = load_presets()[0]
     mapping_table = _mapping_table(sources)
     mapping_inputs = _mapping_inputs(sources)
-    cards = "".join(_source_card(s) for s in sources) or (
-        '<div class="src"><p>No sources configured yet.</p></div>'
+    rows = "".join(_source_row(s) for s in sources) or (
+        '<p class="note">No sources configured yet.</p>'
     )
     flash = ""
     if message:
@@ -1308,39 +2045,31 @@ def sources_page(message: str = "", error: str = "") -> bytes:
                   for k in ("A_PRIMARY", "B_COMPANY", "C_INDEPENDENT", "D_COMMERCIAL",
                             "E_RELEASE", "F_COMMUNITY")]
     )
-    inputs = "".join(
-        f"""<label>{esc(label)}
-<input type="{kind}" name="{key}" placeholder="{esc(placeholder)}" {'required' if required else ''}>
-</label>""" for key, label, kind, placeholder, required in _FIELDS
-    )
+    def field(key: str) -> str:
+        label, kind, placeholder, required = _FIELD_BY_KEY[key]
+        mark = '<span class="req">*</span>' if required else ""
+        return (f'<div class="field"><label for="src-{key}">{esc(label)}{mark}</label>'
+                f'<input type="{kind}" id="src-{key}" name="{key}" '
+                f'placeholder="{esc(placeholder)}"{" required" if required else ""}></div>')
+
+    def fields(*keys: str) -> str:
+        return "".join(field(k) for k in keys)
 
     body = f"""<header class="masthead">
 <h1>Sources</h1>
-<p class="lede">Declared sources run beside the built-in ones; only a Class-A source can mark a finding verified.</p>
+{_source_health(sources)}
 </header>
 {flash}
 <section class="check">
-<div class="check-head"><h2>Scan shortcuts</h2></div>
-<p class="reason">One-click buttons on the scan page. Any of the ~10,400
-SEC-registered tickers can be typed into the box without being listed here —
-these are just the ones worth a click. A ticker is checked against SEC's own
-register before it is saved, so a shortcut cannot point at nothing.</p>
-<div class="presets">{preset_chips}</div>
-<form class="inline" method="post" action="/presets/add">
-<input type="text" name="ticker" placeholder="TICKER" maxlength="8" required
-       autocomplete="off">
-<input type="text" name="note" placeholder="What it is good for showing" autocomplete="off">
-<button type="submit">Add shortcut</button>
-</form>
+<div class="check-head"><h2>Declared sources</h2>
+<span class="head-note">{len(sources)} declared · sources/*.toml</span></div>
+{_source_toolbar(sources)}
+<div class="srclist" id="srclist">{rows}</div>
+{_pager(len(sources), len(sources), "")}
 </section>
 
-<section class="check">
-<div class="check-head"><h2>Company mappings</h2></div>
-<p class="reason">Sources that are not keyed on CIK need to be told how a company
-is named in them. Every mapping here is typed by a person on purpose — a name
-search against these returns the wrong company often enough that one false
-positive on a safety or enforcement record is worse than no record at all. A form
-is fine; guessing is not. Leave a field blank to remove that mapping.</p>
+<section class="check" id="mappings">
+<div class="check-head"><h2>Company name mappings</h2></div>
 {mapping_table}
 <form class="inline" method="post" action="/entities/set">
 <input type="text" name="ticker" placeholder="TICKER" maxlength="8" required autocomplete="off">
@@ -1349,25 +2078,49 @@ is fine; guessing is not. Leave a field blank to remove that mapping.</p>
 </form>
 </section>
 
-<div class="srcgrid">{cards}</div>
-<section class="check">
-<div class="check-head"><h2>Add a source</h2></div>
-<p class="reason">The URL may contain <code>{{entity}}</code>, <code>{{ticker}}</code> or
-<code>{{cik}}</code>. Use <code>{{cik}}</code> where you can — it is exact, so the
-source then applies to every company without a mapping. A name-based source needs
-one entity line per company, and will report as not applicable for anything else.</p>
-<form class="add" method="post" action="/sources/add">
-{inputs}
-<label>Reliability class<select name="class">{options}</select></label>
-<label>Format<select name="kind"><option value="json">JSON</option>
-<option value="rss">RSS / Atom</option></select></label>
-<label class="wide">Entity mapping — one per line, TICKER = Name as the source spells it
-<textarea name="entities" placeholder="TSLA = Tesla&#10;AAPL = Apple Inc"></textarea></label>
-<div class="wide"><button type="submit">Add source</button></div>
+<div class="srcband">
+<section class="check" id="shortcuts">
+<div class="check-head"><h2>Scan shortcuts</h2></div>
+<div class="presets">{_preset_chips()}</div>
+{_pager(len(presets), len(presets), "", compact=True) if presets else ""}
+<form class="inline" method="post" action="/presets/add">
+<input type="text" name="ticker" placeholder="TICKER" maxlength="8" required
+       autocomplete="off">
+<input type="text" name="note" placeholder="What it is good for showing" autocomplete="off">
+<button type="submit">Add shortcut</button>
 </form>
 </section>
-<footer>Sources are plain TOML in <code>sources/</code>. Anything added here can be
-edited or deleted by hand.</footer>"""
+
+<section class="check" id="declare">
+<div class="check-head"><h2>Declare a source</h2></div>
+<form class="add" method="post" action="/sources/add">
+<div class="fieldset"><span class="eyebrow">1 · What it is</span>
+<div class="fields two">{fields("name", "note")}</div>
+</div>
+<div class="fieldset"><span class="eyebrow">2 · Where it lives</span>
+<div class="fields">{fields("url")}</div>
+<span class="sub"><code>{{entity}}</code> · <code>{{ticker}}</code> · <code>{{cik}}</code>
+— <code>{{cik}}</code> is exact and needs no mapping</span>
+<div class="fields two">
+<div class="field"><label for="src-class-pick">Class</label>
+<select id="src-class-pick" name="class">{options}</select></div>
+<div class="field"><label for="src-kind">Format</label>
+<select id="src-kind" name="kind"><option value="json">JSON</option>
+<option value="rss">RSS / Atom</option></select></div>
+</div>
+</div>
+<div class="fieldset"><span class="eyebrow">3 · Extraction</span>
+<div class="rows">{fields("items", "title", "detail", "date", "link", "match")}</div>
+</div>
+<div class="fieldset"><span class="eyebrow">4 · Company names</span>
+<div class="field"><label for="src-entities">One per line, TICKER = Name as the source spells it</label>
+<textarea id="src-entities" name="entities" placeholder="TSLA = Tesla&#10;AAPL = Apple Inc"></textarea></div>
+</div>
+<div class="add-actions"><button type="submit">Add source</button></div>
+</form>
+</section>
+</div>
+{SOURCES_SCRIPT}"""
     return _page("Sources — Contour", body, current="/sources")
 
 
@@ -1445,13 +2198,102 @@ def set_entities_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes
     )
 
 
+class SeeOther(Exception):
+    """Post/Redirect/Get. Rendering the page straight from the POST sends the
+    reader back to the top of it; removing the fourth shortcut of six should
+    leave them looking at the shortcuts."""
+
+    def __init__(self, location: str) -> None:
+        super().__init__(location)
+        self.location = location
+
+
+def _back_to(anchor: str, message: str = "", error: str = "") -> SeeOther:
+    query = ""
+    if message:
+        query = "?ok=" + quote(message)
+    elif error:
+        query = "?err=" + quote(error)
+    return SeeOther(f"/sources{query}#{anchor}")
+
+
 def remove_preset_route(form: dict[str, list[str]]) -> bytes:
     ticker = (form.get("ticker", [""])[0] or "").strip().upper()
     try:
         remove_preset(ticker)
     except (ValueError, OSError) as exc:
-        return sources_page(error=f"Not removed — {exc}")
-    return sources_page(message=f"Removed {ticker} from the scan shortcuts.")
+        raise _back_to("shortcuts", error=f"Not removed — {exc}")
+    raise _back_to("shortcuts", message=f"Removed {ticker} from the scan shortcuts.")
+
+
+def _cadence_cell(t) -> str:
+    """How often the background pass should revisit this company.
+
+    `manual only` keeps the company tracked but never revisits it on a timer,
+    which is not the same as untracking it: the baseline stays, so a scan on
+    request still has something to diff against.
+    """
+    options = "".join(
+        f'<option value="{esc(key)}"{" selected" if key == t.cadence else ""}>'
+        f"{esc(label)}</option>"
+        for key, label in (("daily", "day"), ("weekly", "week"),
+                           ("monthly", "month"), ("manual", "manual only")))
+    return (f'<form class="cadence" method="post" action="/cadence">'
+            f'<input type="hidden" name="ticker" value="{esc(t.ticker)}">'
+            f'<select name="cadence" aria-label="Rescan {esc(t.ticker)} every">'
+            f"{options}</select>"
+            f'<button type="submit">set</button></form>')
+
+
+def cadence_route(form: dict[str, list[str]]) -> bytes:
+    ticker = (form.get("ticker", [""])[0] or "").strip().upper()
+    cadence = (form.get("cadence", [""])[0] or "").strip()
+    try:
+        with connect() as connection:
+            changed = set_cadence(connection, ticker, cadence)
+    except ValueError as exc:
+        return tracked_page(error=f"Not saved — {exc}")
+    if not changed:
+        return tracked_page(error=f"{ticker} is not tracked.")
+    return tracked_page(message=f"{ticker} will be rescanned {cadence}.")
+
+
+def settings_page() -> bytes:
+    """What this workspace is and where it keeps things.
+
+    Read-only on purpose. Everything here is set by the environment or by the
+    command that started the server, and a control that looks editable but
+    writes nowhere is worse than a stated fact.
+    """
+    from ledger import profile as _profile
+    name = os.environ.get("CONTOUR_USER_NAME", "").strip() or "Account"
+    email = os.environ.get("CONTOUR_USER_EMAIL", "").strip() or "not set"
+    agent = os.environ.get("SEC_USER_AGENT", "").strip() or "not set — EDGAR will refuse"
+    key = "set" if os.environ.get("ANTHROPIC_API_KEY", "").strip() else "not set"
+    facts = [
+        ("Name", name, "CONTOUR_USER_NAME"),
+        ("Email", email, "CONTOUR_USER_EMAIL"),
+        ("Profile", _profile.label(), "CONTOUR_PROFILE"),
+        ("Data", str(_profile.data_dir()), ""),
+        ("Config", str(_profile.config_dir()), ""),
+        ("SEC contact", agent, "SEC_USER_AGENT"),
+        ("Model key", key, "ANTHROPIC_API_KEY"),
+        ("Daily pass", "on" if DAILY["on"] else "off", "--daily"),
+    ]
+    cards = ""
+    for label, value, source in facts:
+        note = f'<small class="note">{esc(source)}</small>' if source else ""
+        cards += (f'<div class="setting"><span>{esc(label)}</span>'
+                  f"<b>{esc(value)}</b>{note}</div>")
+    body = f"""<header class="masthead"><h1>Settings</h1></header>
+<section class="check"><div class="check-head"><h2>Workspace</h2></div>
+<div class="settings-grid">{cards}</div>
+</section>
+<section class="check"><div class="check-head"><h2>Appearance</h2></div>
+<p class="count-line">Theme follows the control in the bar above: system, light
+or dark. The choice is kept in this browser.</p>
+</section>"""
+    return _page("Settings — Contour", body, current="/settings")
 
 
 def tracked_page(message: str = "", error: str = "") -> bytes:
@@ -1487,6 +2329,7 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             f'<td class="num">{t.baseline_facts:,}</td>'
             f'<td class="num">{("+" + format(t.facts_added, ",")) if t.facts_added else "—"}</td>'
             f"<td>{delta_cell(t.ticker)}</td>"
+            f"<td>{_cadence_cell(t)}</td>"
             f'<td><form method="post" action="/untrack">'
             f'<input type="hidden" name="ticker" value="{esc(t.ticker)}">'
             f'<button class="ghost" type="submit">stop</button></form></td></tr>'
@@ -1498,39 +2341,37 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             '<th scope="col">Baseline taken</th><th scope="col">Last scan</th>'
             '<th scope="col" class="num">Scans</th><th scope="col" class="num">Baseline figures</th>'
             '<th scope="col" class="num">Added since</th><th scope="col">Since last scan</th>'
-            '<th scope="col"></th>'
+            '<th scope="col">Rescan every</th><th scope="col"></th>'
             f"</tr></thead><tbody>{body_rows}</tbody></table></div>"
         )
     else:
         table = ('<p class="reason">Nothing tracked yet. Scan a company and press '
                  "<em>Add to watchlist</em>.</p>")
 
-    daily_state = (
-        f'<span class="quiet">Daily pass on — last run {esc(DAILY["last"] or "— hasn\u2019t run yet")}.</span>'
-        if DAILY["on"] else
-        '<span class="quiet">Daily pass off — start the server with --daily to enable it.</span>'
-    )
     body = f"""<header class="masthead">
 <h1>Watchlist</h1>
 </header>
 {flash}
+{table}
 <div class="rescan">
 <form method="post" action="/rescan"><button type="submit">Rescan all</button></form>
-{daily_state}
 </div>
-{table}
 <footer class="meta-line">{_ledger_line()}</footer>"""
     return _page("Watchlist — Contour", body, current="/tracked")
 
 
-def rescan_tracked(client: EdgarClient) -> list[tuple[str, object]]:
-    """Rescan every tracked company and return what changed for each.
+def rescan_tracked(client: EdgarClient, due_only: bool = False) -> list[tuple[str, object]]:
+    """Rescan tracked companies and return what changed for each.
 
     Sequential on purpose — these hit SEC, and a burst of parallel requests is
     the fastest way to get an IP throttled mid-demo.
+
+    `due_only` is for the background pass, which respects each company's
+    cadence. Pressing Rescan all is a deliberate act and rescans everything.
     """
     with connect() as connection:
-        tickers = [t.ticker for t in tracked_companies(connection)]
+        tracked = tracked_companies(connection)
+    tickers = [t.ticker for t in tracked if t.due()] if due_only else [t.ticker for t in tracked]
     out: list[tuple[str, object]] = []
     for ticker in tickers:
         try:
@@ -1695,26 +2536,225 @@ def scan_page() -> bytes:
     verbatim — same heading, same active nav item — so clicking Scan looked
     like nothing had happened at all.
     """
+    ledger = _ledger_line()
     body = f"""<header class="masthead">
 <h1>Scan</h1>
-<p class="lede">Any of the ~10,400 SEC-registered tickers. Every figure is computed
-from a filing fetched now and cites the accession it came from.</p>
 {_form()}
 </header>
-{_suggestions()}"""
+<section class="check">
+<div class="check-head"><h2>Watchlist</h2>
+<a class="head-link" href="/tracked">Manage ›</a></div>
+{_watchlist_table()}
+</section>
+{_recent_chips()}
+{f'<footer>{esc(ledger)}</footer>' if ledger else ""}"""
     return _page("Scan — Contour", body, current="/scan")
 
 
-def compare_page() -> bytes:
-    """Pick two companies. The report itself is /scan with both tickers."""
-    recent = _suggestions()
+
+# The picker is server-rendered and correct without this: every state below is
+# also produced by a round trip. It exists so the commit bar answers a click
+# immediately rather than a page later — picking a company and still reading
+# "pick a company on each side" makes the page look broken.
+PICKER_SCRIPT = """<script>
+(function(){
+  var f = document.querySelector('.picker-form');
+  if (!f) return;
+  var who = f.querySelector('.commit-who');
+  var route = f.querySelector('.commit-route');
+  function side(name){
+    var raw = f.querySelector('input[name="' + name + '_raw"]');
+    if (raw && raw.value.trim()) return {t: raw.value.trim().toUpperCase(), c: ''};
+    var hit = f.querySelector('input[name="' + name + '"]:checked');
+    return hit ? {t: hit.value, c: hit.getAttribute('data-company') || ''} : {t: '', c: ''};
+  }
+  function paint(){
+    var a = side('a'), b = side('b');
+    f.querySelectorAll('.js-side-tk').forEach(function(el){
+      el.textContent = (el.getAttribute('data-side') === 'a' ? a.t : b.t) || '\u2014';
+    });
+    f.querySelectorAll('.pick').forEach(function(row){
+      var input = row.querySelector('input');
+      if (!input) return;
+      var far = input.name === 'a' ? b.t : a.t;
+      var taken = input.value === far && far !== '';
+      row.classList.toggle('taken', taken);
+      input.disabled = taken;
+      if (taken) input.checked = false;
+      var note = row.querySelector('.pick-note');
+      if (taken && !note) {
+        note = document.createElement('span');
+        note.className = 'pick-note';
+        note.textContent = 'on side ' + (input.name === 'a' ? 'B' : 'A');
+        row.appendChild(note);
+      } else if (!taken && note) {
+        note.remove();
+      }
+    });
+    var ready = a.t && b.t && a.t !== b.t;
+    who.innerHTML = '';
+    route.innerHTML = '';
+    if (!ready) {
+      who.appendChild(sub('Pick a company on each side.'));
+      return;
+    }
+    var pair = document.createElement('span');
+    pair.className = 'commit-pair';
+    pair.appendChild(bold(a.t));
+    var vs = document.createElement('span');
+    vs.className = 'vs';
+    vs.textContent = 'vs';
+    pair.appendChild(vs);
+    pair.appendChild(bold(b.t));
+    who.appendChild(pair);
+    who.appendChild(sub((a.c || a.t) + ' \u00b7 ' + (b.c || b.t)));
+    var code = document.createElement('code');
+    code.textContent = '/compare?a=' + a.t + '&b=' + b.t;
+    route.appendChild(code);
+    route.appendChild(sub('one row per check \u00b7 union of both rosters'));
+  }
+  function sub(text){
+    var el = document.createElement('span');
+    el.className = 'sub';
+    el.textContent = text;
+    return el;
+  }
+  function bold(text){
+    var el = document.createElement('b');
+    el.className = 'tk';
+    el.textContent = text;
+    return el;
+  }
+  // A watchlist of a hundred companies is two 7,000px columns of radio cards.
+  // Filtering in place beats paging here: on a picker you already know the
+  // ticker you want, and a page number is one more thing to hunt through.
+  function filter(box){
+    var side = box.getAttribute('data-side');
+    var term = box.value.trim().toLowerCase();
+    var shown = 0, total = 0;
+    f.querySelectorAll('.pick').forEach(function(row){
+      var input = row.querySelector('input');
+      if (!input || input.name !== side) return;
+      total++;
+      var hit = !term || row.textContent.toLowerCase().indexOf(term) !== -1;
+      row.hidden = !hit;
+      if (hit) shown++;
+    });
+    var count = f.querySelector('.js-pick-count[data-side="' + side + '"]');
+    if (count) {
+      count.textContent = term ? shown + ' of ' + total + ' shown'
+                               : total + ' tracked';
+    }
+  }
+  f.querySelectorAll('.js-pick-filter').forEach(function(box){
+    box.addEventListener('input', function(){ filter(box); });
+  });
+  f.addEventListener('change', paint);
+  f.addEventListener('input', paint);
+  // An empty text box still submits as a_raw=&b_raw=, so the address bar
+  // contradicts the route the commit bar just promised. Drop the empties.
+  f.addEventListener('submit', function(){
+    f.querySelectorAll('input[type=text]').forEach(function(box){
+      if (!box.value.trim()) box.disabled = true;
+    });
+  });
+  paint();
+})();
+</script>"""
+
+def _pair(query: dict) -> tuple[str, str]:
+    """Read one ticker per side.
+
+    Each side offers two inputs — the watchlist radio and the untracked box.
+    Typing is the more deliberate act, so a filled box wins over a radio that
+    may simply have carried over from the last render.
+    """
+    def one(key: str) -> str:
+        for name in (f"{key}_raw", key):
+            for value in query.get(name, []):
+                if value.strip():
+                    return value.strip().upper()
+        return ""
+    return one("a"), one("b")
+
+
+def _side(name: str, label: str, chosen: str, other: str) -> str:
+    """One column of the compare picker.
+
+    A company already picked on the far side is shown but not selectable: two
+    columns of the same company is a comparison of nothing, and disabling it
+    where it sits explains itself better than an error after the fact.
+    """
+    rows = ""
+    for t in _tracked():
+        taken = t.ticker == other
+        note = (f'<span class="pick-note">on side {"A" if name == "b" else "B"}</span>'
+                if taken else "")
+        rows += (f'<label class="pick{" taken" if taken else ""}">'
+                 f'<input type="radio" name="{name}" value="{esc(t.ticker)}"'
+                 f' data-company="{esc(t.company)}"'
+                 f'{" checked" if t.ticker == chosen and not taken else ""}'
+                 f'{" disabled" if taken else ""}>'
+                 f'<span class="pick-body"><span class="pick-id">'
+                 f'<b class="tk">{esc(t.ticker)}</b>'
+                 f"<b>{esc(t.company)}</b></span>"
+                 f'<span class="sub">last scan {esc(t.last_scan or "never")} · '
+                 f"{t.scans:,} scans · {t.baseline_facts:,} baseline figures</span></span>"
+                 f"{note}</label>")
+    if not rows:
+        rows = '<p class="note">Nothing tracked yet.</p>'
+    total = len(_tracked())
+    return f"""<div class="side">
+<div class="side-head"><span class="eyebrow">{esc(label)}</span>
+<span class="tk js-side-tk" data-side="{name}">{esc(chosen or "—")}</span></div>
+<div class="pick-filter">
+<input type="search" class="js-pick-filter" data-side="{name}"
+       placeholder="Filter tracked" autocomplete="off" aria-label="Filter {esc(label)}">
+<span class="sub js-pick-count" data-side="{name}">{total} tracked</span>
+</div>
+<div class="picks">{rows}</div>
+<div class="pick-alt"><span class="eyebrow">or untracked</span>
+<input type="text" name="{name}_raw" placeholder="Ticker" maxlength="8" autocomplete="off">
+<span class="sub">cold scan — no baseline</span></div>
+</div>"""
+
+
+def compare_page(a: str = "", b: str = "", error: str = "") -> bytes:
+    """Pick two tracked companies. The result is /compare with both tickers.
+
+    Comparison used to be the second field of the scan form, which made this
+    page a relabelled /scan. You are almost always comparing companies you
+    already track, so the watchlist — not a text box — is the instrument.
+    """
+    tracked = {t.ticker: t.company for t in _tracked()}
+    ready = bool(a and b and a != b)
+    pair = (f'<span class="commit-pair"><b class="tk">{esc(a)}</b>'
+            f'<span class="vs">vs</span><b class="tk">{esc(b)}</b></span>'
+            f'<span class="sub">{esc(tracked.get(a, a))} · {esc(tracked.get(b, b))}</span>'
+            if ready else
+            '<span class="sub">Pick a company on each side.</span>')
+    # Both spans are always rendered, even empty. The picker script fills them
+    # on every change; a span that only exists once a pair is chosen is a null
+    # the first keystroke trips over.
+    route = (f'<code>/compare?a={esc(a)}&amp;b={esc(b)}</code>'
+             f'<span class="sub">one row per check · union of both rosters</span>'
+             if ready else "")
+    flash = f'<div class="flash bad">{esc(error)}</div>' if error else ""
     body = f"""<header class="masthead">
 <h1>Compare</h1>
-<p class="lede">Two companies, one row per check. A check flagged on one side and
-unavailable on the other reads as a single horizontal glance.</p>
-{_form()}
 </header>
-{recent}"""
+{flash}
+<form class="picker-form" method="get" action="/compare">
+<div class="picker">
+{_side("a", "Side A", a, b)}
+<div class="vs-rail"><span class="vs">vs</span></div>
+{_side("b", "Side B", b, a)}
+</div>
+<div class="commit"><span class="commit-who">{pair}</span>
+<span class="commit-route">{route}</span>
+<button type="submit">Compare</button></div>
+</form>
+{PICKER_SCRIPT}"""
     return _page("Compare — Contour", body, current="/compare")
 
 
@@ -1758,7 +2798,7 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
         on = entry.key in chosen
         why = (rec.why or {}).get(entry.key) or entry.spec.rationale
         rows.append(
-            f'<label class="pick{" on" if on else ""}">'
+            f'<label class="pick">'
             f'<input type="checkbox" name="check" value="{esc(entry.key)}"'
             f'{" checked" if on else ""}>'
             f'<span class="pick-body"><b>{esc(entry.spec.title)}</b>'
@@ -1766,8 +2806,14 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
             f'<span class="status {esc(entry.spec.severity)}">{esc(entry.spec.severity)}</span>'
             f"</label>"
         )
+    # These used to be bare list items. A check that cannot run is the same
+    # class of fact as one that can, so it gets the same row and states why.
     ruled_out = "".join(
-        f"<li><b>{esc(e.spec.title)}</b> — {esc(reason)}</li>" for e, reason in excluded
+        f'<div class="pick out"><span class="pick-body">'
+        f"<b>{esc(e.spec.title)}</b>"
+        f'<span class="pick-why">{esc(reason)}</span></span>'
+        f'<span class="pick-tag">unavailable</span></div>'
+        for e, reason in excluded
     )
     # The fallback reason is a fragment ("no Anthropic credentials — ordered by
     # severity instead"); it needs framing to read as a sentence beside the rest.
@@ -1781,12 +2827,11 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
 <span class="sub">{esc(ticker)} · CIK {company.cik} · {esc(label)} (SIC {esc(sic)})</span></div>
 <form method="post" action="/add/confirm">
 <input type="hidden" name="ticker" value="{esc(ticker)}">
-<p class="lede">{len(eligible)} of {len(eligible) + len(excluded)} catalogue checks
-can run against this filer. {source_line} Change anything below — the roster is
-yours, and nothing is saved until you confirm.</p>
+<p class="count-line">{len(eligible)} of {len(eligible) + len(excluded)} catalogue
+checks can run here · {source_line}</p>
 <div class="picks">{"".join(rows)}</div>
-<details class="roster"><summary>{len(excluded)} ruled out</summary>
-<ul>{ruled_out}</ul></details>
+<details class="roster"><summary>{len(excluded)} cannot run against this filer</summary>
+<div class="picks out">{ruled_out}</div></details>
 <div class="wizard-actions">
 <button type="submit">Add {esc(ticker)} and take a baseline</button>
 <a class="ghost-link" href="/add">Start over</a>
@@ -1897,12 +2942,24 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/tracked":
                 payload = tracked_page()
+            elif parsed.path == "/settings":
+                payload = settings_page()
             elif parsed.path == "/sources":
-                payload = sources_page()
+                query = parse_qs(parsed.query)
+                payload = sources_page(message=(query.get("ok", [""])[0]),
+                                       error=(query.get("err", [""])[0]))
             elif parsed.path == "/add":
                 payload = add_page()
             elif parsed.path == "/compare":
-                payload = compare_page()
+                query = parse_qs(parsed.query)
+                a, b = _pair(query)
+                if a and b and a == b:
+                    payload = compare_page(a, "", error=f"{a} cannot be compared "
+                                           "with itself — pick a second company.")
+                elif a and b:
+                    payload = results(self.client, [a, b], compare=True)
+                else:
+                    payload = compare_page(a, b)
             elif parsed.path == "/scan":
                 query = parse_qs(parsed.query)
                 tickers = [
@@ -1911,7 +2968,16 @@ class Handler(BaseHTTPRequestHandler):
                     for t in query.get(key, [])
                     if t.strip()
                 ]
-                payload = results(self.client, tickers[:2]) if tickers else scan_page()
+                # A pair belongs to /compare now. Old links and bookmarks still
+                # carry ?a=&b=, so send them on rather than rendering a second
+                # comparison surface under the scan route.
+                if len(tickers) > 1:
+                    self.send_response(302)
+                    self.send_header(
+                        "Location", f"/compare?a={quote(tickers[0])}&b={quote(tickers[1])}")
+                    self.end_headers()
+                    return
+                payload = results(self.client, tickers[:1]) if tickers else scan_page()
             else:
                 payload = landing()
         except Exception:  # noqa: BLE001 — never return a bare 500 to the browser
@@ -1933,6 +2999,8 @@ class Handler(BaseHTTPRequestHandler):
                 payload = track_route(self.client, form)
             elif parsed.path == "/untrack":
                 payload = untrack_route(form)
+            elif parsed.path == "/cadence":
+                payload = cadence_route(form)
             elif parsed.path == "/authored/write":
                 payload = write_checks_route(self.client, form)
             elif parsed.path == "/add/review":
@@ -1953,6 +3021,11 @@ class Handler(BaseHTTPRequestHandler):
                 payload = remove_preset_route(form)
             else:
                 payload = sources_page()
+        except SeeOther as redirect:
+            self.send_response(303)
+            self.send_header("Location", redirect.location)
+            self.end_headers()
+            return
         except Exception:  # noqa: BLE001 — never return a bare 500 to the browser
             payload = _page("Error", f'<div class="error"><p>{esc(traceback.format_exc()[-600:])}</p></div>')
         self._respond(payload)

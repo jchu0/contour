@@ -12,8 +12,7 @@ from. No model decides what is true.
 
 ## Background
 
-Built for the **AILaunch Arizona AI Agent Hackathon** (22–23 August 2026,
-Chandler, AZ).
+Built for the **AILaunch Arizona AI Agent Hackathon**.
 
 **Team:** James, Jim, Scott, Blake.
 
