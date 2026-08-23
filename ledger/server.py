@@ -56,6 +56,7 @@ from ledger.sources import (
 from ledger.agents.summary import executive_summary
 from ledger.store import (
     recent_source_items,
+    watchlist_coverage,
     connect,
     coverage,
     latest_delta,
@@ -179,6 +180,23 @@ background:var(--surface);border:1px solid var(--rule)}
 .market-head{display:flex;flex-direction:column;gap:.15rem}
 .market-head h2{font-family:var(--sans);font-size:1.0625rem;font-weight:600;margin:0}
 .market .who{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.coverage{display:flex;flex-direction:column;gap:.6rem;padding:1rem 1.15rem;
+background:var(--surface);border:1px solid var(--rule)}
+.cov-head{display:flex;flex-direction:column;gap:.15rem}
+.cov-note{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);line-height:1.5}
+.coverage .health{border-top:1px solid var(--rule);padding-top:.75rem;gap:0 1.75rem}
+.coverage .health-fact b{font-size:.9375rem}
+.attn{display:flex;flex-direction:column;gap:1px;background:var(--rule);
+border:1px solid var(--rule)}
+.attn-item{display:flex;flex-direction:column;gap:.2rem;padding:.65rem .85rem;
+background:var(--surface);text-decoration:none;color:inherit}
+.attn-item:hover{background:var(--surface-2)}
+.attn-head{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--ink)}
+.attn-why{padding-left:1.05rem;font-family:var(--mono);font-size:.6875rem;
+color:var(--ink-3);line-height:1.5}
+.attn .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--ink-3)}
+.attn .dot.warn{background:var(--med)}
+.attn .dot.ok{background:var(--pass)}
 .news-note{margin:0 0 .7rem;font-family:var(--mono);font-size:.6875rem;
 color:var(--ink-3);line-height:1.5}
 .news{display:flex;flex-direction:column;gap:1px;background:var(--rule);
@@ -1047,6 +1065,17 @@ TOURS: dict[str, list[tuple[str, str, str]]] = {
         (".sidebar", "The two halves of the app",
          "Analyse reads companies. Manage decides which companies get read and "
          "from which sources."),
+        (".coverage", "What was actually covered",
+         "Across the last scan of each watched company: how many checks ran, "
+         "how many could not, and how many do not apply here. A gap and a "
+         "clean result are different answers and are counted apart."),
+        (".attn", "What is quietly narrowing a scan",
+         "A source switched off, a cadence nothing is honouring, a name nobody "
+         "confirmed. None of these is an error, which is why each is easy to "
+         "miss, and each costs coverage somewhere."),
+        (".news", "What the feeds turned up",
+         "Class C to F only — corroboration for the companies you watch. "
+         "Nothing here has been checked against a filing."),
         (".facts", "The ledger so far",
          "Every figure Contour has read from a filing, with the companies and "
          "reporting periods they cover. These are counts of stored facts, not "
@@ -1056,8 +1085,6 @@ TOURS: dict[str, list[tuple[str, str, str]]] = {
          "baseline shows its delta; one without shows a first reading."),
         (".ov-side", "Your watchlist at a glance",
          "Tracked companies and where each one stands, one click from here."),
-        ("form.scan", "Start a scan",
-         "Any registered ticker, straight from here."),
     ],
     "/scan": [
         ("form.scan", "One company",
@@ -1722,6 +1749,98 @@ def _overview_watchlist(connection) -> str:
             f'<tbody>{"".join(out)}</tbody></table>')
 
 
+def _coverage_strip(connection) -> str:
+    """What the watchlist's last scans actually covered.
+
+    The page reported what was found and never what could not be looked at,
+    which reads as full coverage the page has not verified. A check that could
+    not run and a check that does not apply are counted apart, because they are
+    different answers.
+    """
+    try:
+        watched = [t.ticker for t in tracked_companies(connection)]
+        cover = watchlist_coverage(connection, watched)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not cover or not watched:
+        return ""
+    if not cover["companies"]:
+        return ('<div class="coverage"><span class="cov-note">Coverage was not '
+                "recorded for these companies. Rescan to measure it.</span></div>")
+    total = cover["ran"] + cover["unavailable"]
+    pct = (cover["ran"] / total * 100) if total else 0.0
+    cells = [("Checks ran", f"{cover['ran']:,}", "pass"),
+             ("Could not run", f"{cover['unavailable']:,}",
+              "warn" if cover["unavailable"] else ""),
+             ("Not applicable", f"{cover['not_applicable']:,}", ""),
+             ("Findings", f"{cover['findings']:,}", "")]
+    facts = "".join(
+        f'<div class="health-fact {tone}"><span>{esc(label)}</span><b>{value}</b></div>'
+        for label, value, tone in cells)
+    stale = (f" · {cover['unmeasured']} not measured"
+             if cover["unmeasured"] else "")
+    return (f'<div class="coverage"><div class="cov-head">'
+            f'<span class="eyebrow">Coverage · last scan of each watched company</span>'
+            f'<span class="cov-note">{pct:.0f}% of attempted checks ran across '
+            f"{cover['companies']} companies{esc(stale)}</span></div>"
+            f'<div class="health">{facts}</div></div>')
+
+
+def _attention(connection) -> str:
+    """Conditions that quietly narrow what a scan can see.
+
+    None of these is an error, which is why each one is easy to miss: a source
+    switched off, a cadence nothing is honouring, a name nobody confirmed. Each
+    costs coverage somewhere else in the app, and the page you land on is where
+    that should be visible.
+    """
+    rows = []
+    try:
+        sources, _ = load_sources()
+        idle = [s for s in sources if _source_state(s)[0] != "live"]
+        if idle:
+            names = ", ".join(esc(s.name) for s in idle[:3])
+            rows.append(("/sources", f"{len(idle)} declared source"
+                         f"{'s are' if len(idle) > 1 else ' is'} not running",
+                         f"{names} — every scan is narrower for it", "warn"))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        tracked = tracked_companies(connection)
+        overdue = [t for t in tracked if t.due()]
+        if overdue and not DAILY["on"]:
+            rows.append(("/tracked",
+                         f"{len(overdue)} compan{'ies are' if len(overdue) > 1 else 'y is'}"
+                         " due a rescan, and nothing is scheduled",
+                         "Cadence is set but the background pass is off — "
+                         "start the server with --daily, or rescan by hand", "warn"))
+        elif overdue:
+            rows.append(("/tracked", f"{len(overdue)} due a rescan",
+                         "The daily pass will pick them up", ""))
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from ledger.config import load_proposed
+
+        pending = sum(len(v) for v in load_proposed().values())
+        if pending:
+            rows.append(("/sources", f"{pending} name mapping"
+                         f"{'s await' if pending > 1 else ' awaits'} confirmation",
+                         "Until confirmed, those sources report not applicable — "
+                         "a gap that reads like an answer", "warn"))
+    except Exception:  # noqa: BLE001
+        pass
+    if not rows:
+        return ""
+    items = "".join(
+        f'<a class="attn-item" href="{href}"><span class="attn-head">'
+        f'<i class="dot {tone or "ok"}"></i>{esc(head)}</span>'
+        f'<span class="attn-why">{why}</span></a>'
+        for href, head, why, tone in rows)
+    return (f'<section class="panel"><div class="panel-head"><h2>Needs attention</h2>'
+            f'</div><div class="attn">{items}</div></section>')
+
+
 def _overview_news(connection) -> str:
     """What the declared feeds turned up for companies you watch.
 
@@ -1850,12 +1969,15 @@ def _digest_html() -> str:
 
 def landing() -> bytes:
     stats, watchlist, activity, news = {}, "", "", ""
+    coverage_strip, attention = "", ""
     try:
         with connect() as connection:
             stats = coverage(connection)
             watchlist = _overview_watchlist(connection)
             activity = _activity(connection)
             news = _overview_news(connection)
+            coverage_strip = _coverage_strip(connection)
+            attention = _attention(connection)
     except Exception:  # noqa: BLE001 — the page must render on a cold database
         stats = {}
 
@@ -1863,6 +1985,8 @@ def landing() -> bytes:
 <div class="ov-main">
 <header class="masthead"><h1>Overview</h1></header>
 {_digest_html()}
+{coverage_strip}
+{attention}
 <section class="panel"><div class="panel-head"><h2>Watchlist</h2>
 <a href="/tracked">Manage &rarr;</a></div>{watchlist}</section>
 {news}
@@ -3490,7 +3614,7 @@ def add_page(error: str = "") -> bytes:
 
 def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
     """Step 2 — what applies, what is recommended, and what was ruled out."""
-    from ledger.authored import available_concepts
+    from ledger.agents.checks import available_concepts
     from ledger.agents.roster import recommend
     from ledger.catalogue import applicable
 
