@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime as _dt
 import os
+import pathlib
 import threading
 import time
 import traceback
@@ -420,9 +421,9 @@ letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowr
   border-right:1px solid var(--rule)}
 .brand{display:flex;align-items:center;gap:.6rem;padding:.25rem .5rem;
   text-decoration:none;color:var(--ink)}
-.brand-mark{display:grid;place-items:center;width:1.9rem;height:1.9rem;flex:none;
-  border-radius:6px;background:var(--accent);color:var(--paper);
-  font-family:var(--mono);font-size:.625rem;font-weight:700;letter-spacing:.02em}
+/* The mark is dark navy and teal; it needs a light ground in both themes. */
+.brand-mark{display:block;width:1.9rem;height:1.9rem;flex:none;border-radius:6px;
+background:#F5F6F8;padding:.15rem;object-fit:contain}
 .brand-name{font-weight:600;font-size:.9375rem;letter-spacing:-.01em}
 .nav-list{display:flex;flex-direction:column;gap:.15rem}
 .nav-item{display:flex;align-items:center;gap:.6rem;padding:.45rem .5rem;
@@ -902,6 +903,28 @@ def _nav_badges() -> dict[str, tuple[str, str]]:
     return out
 
 
+_MARK_URI: str | None = None
+
+
+def _mark() -> str:
+    """The Contour mark, inlined.
+
+    The app serves no static files, so the logo rides as a data URI. It is read
+    once and kept: a brand mark that hits the disk on every page render is a
+    page that breaks when someone moves the file.
+    """
+    global _MARK_URI
+    if _MARK_URI is None:
+        import base64
+        path = pathlib.Path(__file__).resolve().parent.parent / "assets" / "contour-mark-64.png"
+        try:
+            _MARK_URI = "data:image/png;base64," + base64.b64encode(
+                path.read_bytes()).decode("ascii")
+        except OSError:
+            _MARK_URI = ""
+    return _MARK_URI
+
+
 def _sidebar(current: str = "") -> str:
     """One nav for every page, in two widths.
 
@@ -933,7 +956,7 @@ def _sidebar(current: str = "") -> str:
     # The toggle lives in the top bar, not in the rail. Inside the rail it had
     # nowhere to go when the rail narrowed, and ended up on the brand mark.
     return (f'<aside class="sidebar">'
-            f'<a class="brand" href="/"><span class="brand-mark">CT</span>'
+            f'<a class="brand" href="/"><img class="brand-mark" src="{_mark()}" alt="" width="28" height="28">'
             f'<span class="brand-name nav-label">Contour</span></a>'
             f'<nav class="nav-list">{"".join(blocks)}</nav>'
             f'<div class="sidebar-foot">{_account()}</div></aside>')
@@ -1621,8 +1644,7 @@ def landing() -> bytes:
 
     body = f"""<div class="overview">
 <div class="ov-main">
-<header class="masthead"><h1>Overview</h1>{_form()}</header>
-{_suggestions()}
+<header class="masthead"><h1>Overview</h1></header>
 {_digest_html()}
 <section class="panel"><div class="panel-head"><h2>Watchlist</h2>
 <a href="/tracked">Manage &rarr;</a></div>{watchlist}</section>
