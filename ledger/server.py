@@ -23,10 +23,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 from ledger.api import delta_dict, dumps, index_dict, report_dict, sources_dict, tracked_dict
 from ledger.config import (
-    add_preset,
     load_entities,
-    load_presets,
-    remove_preset,
     set_entities,
 )
 from ledger.edgar import EdgarClient, EdgarError
@@ -803,15 +800,6 @@ text-transform:uppercase;color:var(--ink-3)}
 .field input,.field select,.field textarea{flex:none}
 .field .req{color:var(--high);padding-left:.15rem}
 .add-actions{display:flex;padding-top:.4rem}
-.presets{display:flex;flex-wrap:wrap;gap:.5rem}
-.preset{display:inline-flex;align-items:center;gap:.55rem;border:1px solid var(--rule);
-background:var(--surface);padding:.35rem .4rem .35rem .6rem;font-family:var(--mono);
-font-size:.75rem;color:var(--ink-2)}
-.preset b{color:var(--accent)}
-.preset form{display:inline}
-.preset button{background:none;border:0;color:var(--ink-3);font-size:.9rem;
-line-height:1;padding:0 .2rem;cursor:pointer;font-family:var(--mono)}
-.preset button:hover{color:var(--high)}
 form.inline{display:flex;flex-wrap:wrap;gap:.6rem;align-items:stretch;
 padding-top:1rem;border-top:1px solid var(--rule)}
 form.inline input{font-family:var(--mono);font-size:.875rem;padding:.55rem .7rem;
@@ -1152,9 +1140,6 @@ TOURS: dict[str, list[tuple[str, str, str]]] = {
          "Sources not keyed on CIK must be told how a company is named in "
          "them. A name search returns the wrong company often enough that one "
          "false positive is worse than no record."),
-        ("#shortcuts", "Scan shortcuts",
-         "One-click buttons on the scan page. Any registered ticker can still "
-         "be typed without appearing here."),
         ("#declare", "Add your own",
          "A name, a URL template, a class, and where each field sits in the "
          "response. It is written to plain TOML you can edit by hand."),
@@ -1686,8 +1671,6 @@ def _suggestions() -> str:
                     tickers.append(row["ticker"])
     except Exception:  # noqa: BLE001 — chrome must never take the page down
         pass
-    if not tickers:
-        tickers = [t for t, _ in load_presets()[0]]
     links = "".join(f'<a href="/scan?a={esc(t)}">{esc(t)}</a>' for t in tickers[:8])
     return f'<div class="suggest">{links}</div>' if links else ""
 
@@ -2697,18 +2680,6 @@ def _pager(shown: int, total: int, unit: str, compact: bool = False) -> str:
             f'<span class="sub">Page 1 of 1</span></div></div>')
 
 
-def _preset_chips() -> str:
-    presets, _ = load_presets()
-    return "".join(
-        f'<span class="preset"><b>{esc(t)}</b>{(" — " + esc(n)) if n else ""}'
-        f'<form method="post" action="/presets/remove">'
-        f'<input type="hidden" name="ticker" value="{esc(t)}">'
-        f'<button class="edit-only" type="submit" title="Remove {esc(t)}" '
-        f'aria-label="Remove {esc(t)}">&times;</button></form></span>'
-        for t, n in presets
-    ) or '<span class="preset">none configured</span>'
-
-
 def _mapped_keys(sources) -> list[tuple[str, str]]:
     """(storage key, label) for every mapping a company can carry."""
     keys = [("nhtsa_make", "NHTSA make")]
@@ -2767,8 +2738,6 @@ def sources_page(message: str = "", error: str = "") -> bytes:
     exists to serve them.
     """
     sources, problems = load_sources()
-    problems = problems + load_presets()[1]
-    presets = load_presets()[0]
     mapping_table = _mapping_table(sources)
     mapping_inputs = _mapping_inputs(sources)
     rows = "".join(_source_row(s) for s in sources) or (
@@ -2822,20 +2791,6 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 </form>
 </section>
 
-<div class="srcband">
-<section class="check" id="shortcuts" data-edit-region>
-<div class="check-head"><h2>Scan shortcuts</h2>
-{_edit_button("scan shortcuts")}</div>
-<div class="presets">{_preset_chips()}</div>
-{_pager(len(presets), len(presets), "", compact=True) if presets else ""}
-<form class="inline" method="post" action="/presets/add">
-<input type="text" name="ticker" placeholder="TICKER" maxlength="8" required
-       autocomplete="off">
-<input type="text" name="note" placeholder="What it is good for showing" autocomplete="off">
-<button type="submit">Add shortcut</button>
-</form>
-</section>
-
 <section class="check" id="declare">
 <div class="check-head"><h2>Declare a source</h2></div>
 <form class="add" method="post" action="/sources/add">
@@ -2864,7 +2819,6 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 <div class="add-actions"><button type="submit">Add source</button></div>
 </form>
 </section>
-</div>
 {SOURCES_SCRIPT}"""
     return _page("Sources — Contour", body, current="/sources")
 
@@ -2922,22 +2876,6 @@ def add_source(form: dict[str, list[str]]) -> bytes:
                                 f"It will run on the next scan.")
 
 
-def add_preset_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
-    ticker = (form.get("ticker", [""])[0] or "").strip().upper()
-    note = (form.get("note", [""])[0] or "").strip()
-    try:
-        # Resolve before saving. A shortcut that resolves to nothing is worse
-        # than no shortcut, and the register is the same one the scan uses.
-        company = client.resolve(ticker)
-    except EdgarError as exc:
-        return sources_page(error=f"Not added — {exc}")
-    try:
-        add_preset(ticker, note or company.name)
-    except (ValueError, OSError) as exc:
-        return sources_page(error=f"Not added — {exc}")
-    return sources_page(message=f"Added {ticker} ({company.name}) to the scan shortcuts.")
-
-
 def set_entities_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
     ticker = (form.get("ticker", [""])[0] or "").strip().upper()
     try:
@@ -2980,15 +2918,6 @@ def _back_to(anchor: str, message: str = "", error: str = "") -> SeeOther:
     elif error:
         query = "?err=" + quote(error)
     return SeeOther(f"/sources{query}#{anchor}")
-
-
-def remove_preset_route(form: dict[str, list[str]]) -> bytes:
-    ticker = (form.get("ticker", [""])[0] or "").strip().upper()
-    try:
-        remove_preset(ticker)
-    except (ValueError, OSError) as exc:
-        raise _back_to("shortcuts", error=f"Not removed — {exc}")
-    raise _back_to("shortcuts", message=f"Removed {ticker} from the scan shortcuts.")
 
 
 def _cadence_cell(t) -> str:
@@ -3115,7 +3044,7 @@ def settings_page(notice: str = "") -> bytes:
 <section class="set-group"><h2>Workspace</h2>
 {row("Profile", text(_profile.label()), "CONTOUR_PROFILE")}
 {row("Data", f"<code>{esc(str(_profile.data_dir()))}</code>", "Ledger, caches and scans")}
-{row("Config", f"<code>{esc(str(_profile.config_dir()))}</code>", "Sources, presets, mappings")}
+{row("Config", f"<code>{esc(str(_profile.config_dir()))}</code>", "Sources and mappings")}
 {row("Background pass", "On" if DAILY["on"] else "Off",
      "Start the server with --daily to enable it",
      "" if DAILY["on"] else "muted")}
@@ -3847,8 +3776,6 @@ class Handler(BaseHTTPRequestHandler):
                 payload = toggle_source_route(form)
             elif parsed.path == "/sources/remove":
                 payload = remove_source_route(form)
-            elif parsed.path == "/presets/add":
-                payload = add_preset_route(self.client, form)
             elif parsed.path == "/rescan":
                 payload = rescan_route(self.client)
             elif parsed.path == "/track":
@@ -3875,8 +3802,6 @@ class Handler(BaseHTTPRequestHandler):
                 payload = save_feedback(form)
             elif parsed.path == "/entities/set":
                 payload = set_entities_route(self.client, form)
-            elif parsed.path == "/presets/remove":
-                payload = remove_preset_route(form)
             else:
                 payload = sources_page()
         except SeeOther as redirect:
