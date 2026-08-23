@@ -742,6 +742,7 @@ def scan(client: EdgarClient, ticker: str, *, debug: bool = False) -> Report:
             scan_id = record_scan(
                 connection, ticker=company.ticker, cik=company.cik, company=company.name,
                 findings=report.findings, unavailable=len(report.unavailable),
+                ran=len(report.roster), not_applicable=len(report.not_applicable),
             )
             record_findings(connection, scan_id, company.ticker, [
                 (check.key, item.headline, item.severity,

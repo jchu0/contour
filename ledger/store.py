@@ -29,7 +29,9 @@ CREATE TABLE IF NOT EXISTS scans (
     company     TEXT NOT NULL,
     scanned_at  TEXT NOT NULL,
     findings    INTEGER NOT NULL DEFAULT 0,
-    unavailable INTEGER NOT NULL DEFAULT 0
+    unavailable INTEGER NOT NULL DEFAULT 0,
+    ran         INTEGER NOT NULL DEFAULT 0,
+    not_applicable INTEGER NOT NULL DEFAULT 0
 );
 
 /* One row per (period, metric) per filing. The unique key includes `filed`
@@ -77,6 +79,53 @@ def connect(path: Path = DB_PATH) -> sqlite3.Connection:
     return connection
 
 
+def _ensure_scan_columns(connection: sqlite3.Connection) -> None:
+    """A scan recorded only what it found and what failed.
+
+    How many checks ran, and how many were out of scope, were never stored — so
+    nothing outside a live report could say what a scan actually covered.
+    """
+    columns = {r["name"] for r in connection.execute("PRAGMA table_info(scans)")}
+    for name in ("ran", "not_applicable"):
+        if name not in columns:
+            connection.execute(
+                f"ALTER TABLE scans ADD COLUMN {name} INTEGER NOT NULL DEFAULT 0")
+    connection.commit()
+
+
+def watchlist_coverage(connection: sqlite3.Connection,
+                       tickers: list[str]) -> dict | None:
+    """The most recent scan of each company, added up.
+
+    Counts only scans that recorded coverage. A company last scanned before
+    those columns existed is reported as unmeasured rather than folded in as a
+    zero, which would read as "nothing failed" when it means "not known".
+    """
+    if not tickers:
+        return None
+    _ensure_scan_columns(connection)
+    marks = ",".join("?" * len(tickers))
+    rows = connection.execute(
+        f"SELECT s.ticker, s.ran, s.not_applicable, s.unavailable, s.findings"
+        f" FROM scans s JOIN (SELECT ticker, MAX(id) AS id FROM scans"
+        f"   WHERE ticker IN ({marks}) GROUP BY ticker) latest"
+        f"   ON latest.id = s.id",
+        [t.upper() for t in tickers],
+    ).fetchall()
+    measured = [r for r in rows if r["ran"]]
+    if not measured:
+        return {"companies": 0, "unmeasured": len(rows), "ran": 0,
+                "unavailable": 0, "not_applicable": 0, "findings": 0}
+    return {
+        "companies": len(measured),
+        "unmeasured": len(rows) - len(measured),
+        "ran": sum(r["ran"] for r in measured),
+        "unavailable": sum(r["unavailable"] for r in measured),
+        "not_applicable": sum(r["not_applicable"] for r in measured),
+        "findings": sum(r["findings"] for r in measured),
+    }
+
+
 def record_scan(
     connection: sqlite3.Connection,
     *,
@@ -85,11 +134,15 @@ def record_scan(
     company: str,
     findings: int,
     unavailable: int,
+    ran: int = 0,
+    not_applicable: int = 0,
 ) -> int:
+    _ensure_scan_columns(connection)
     cursor = connection.execute(
-        "INSERT INTO scans (ticker, cik, company, scanned_at, findings, unavailable)"
-        " VALUES (?, ?, ?, ?, ?, ?)",
-        (ticker.upper(), cik, company, date.today().isoformat(), findings, unavailable),
+        "INSERT INTO scans (ticker, cik, company, scanned_at, findings, unavailable,"
+        " ran, not_applicable) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (ticker.upper(), cik, company, date.today().isoformat(), findings, unavailable,
+         ran, not_applicable),
     )
     connection.commit()
     return int(cursor.lastrowid or 0)
