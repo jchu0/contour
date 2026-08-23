@@ -583,6 +583,7 @@ form.cadence button{font-family:var(--mono);font-size:.625rem;letter-spacing:.06
 text-transform:uppercase;padding:.25rem .45rem;background:none;color:var(--ink-3);
 border:1px solid var(--rule);cursor:pointer}
 form.cadence button:hover{border-color:var(--accent);color:var(--accent)}
+.count-line{margin:0;font-family:var(--mono);font-size:.75rem;color:var(--ink-3)}
 .pg-arrows{display:flex;gap:.4rem}
 .pg-arrow{display:grid;place-items:center;width:2.125rem;height:2.125rem;
 border:1px solid var(--rule);background:var(--surface)}
@@ -1765,7 +1766,6 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 
     body = f"""<header class="masthead">
 <h1>Sources</h1>
-<p class="lede">Declared sources run beside the built-in ones; only a Class-A source can mark a finding verified.</p>
 {_source_health(sources)}
 </header>
 {flash}
@@ -2210,8 +2210,6 @@ def scan_page() -> bytes:
     ledger = _ledger_line()
     body = f"""<header class="masthead">
 <h1>Scan</h1>
-<p class="lede">Any of the ~10,400 SEC-registered tickers. Every figure is computed
-from a filing fetched now and cites the accession it came from.</p>
 {_form()}
 </header>
 <section class="check">
@@ -2415,8 +2413,6 @@ def compare_page(a: str = "", b: str = "", error: str = "") -> bytes:
     flash = f'<div class="flash bad">{esc(error)}</div>' if error else ""
     body = f"""<header class="masthead">
 <h1>Compare</h1>
-<p class="lede">Two companies, one row per check. A check flagged on one side and
-unavailable on the other reads as a single horizontal glance.</p>
 </header>
 {flash}
 <form class="picker-form" method="get" action="/compare">
@@ -2502,9 +2498,8 @@ def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
 <span class="sub">{esc(ticker)} · CIK {company.cik} · {esc(label)} (SIC {esc(sic)})</span></div>
 <form method="post" action="/add/confirm">
 <input type="hidden" name="ticker" value="{esc(ticker)}">
-<p class="lede">{len(eligible)} of {len(eligible) + len(excluded)} catalogue checks
-can run against this filer. {source_line} Change anything below — the roster is
-yours, and nothing is saved until you confirm.</p>
+<p class="count-line">{len(eligible)} of {len(eligible) + len(excluded)} catalogue
+checks can run here · {source_line}</p>
 <div class="picks">{"".join(rows)}</div>
 <details class="roster"><summary>{len(excluded)} cannot run against this filer</summary>
 <div class="picks out">{ruled_out}</div></details>
