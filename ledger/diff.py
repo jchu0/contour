@@ -19,6 +19,19 @@ HEADING_PAIR_THRESHOLD = 0.45
 UNCHANGED_THRESHOLD = 0.97
 # Blocks shorter than this are headers, page furniture, or stray table cells.
 MIN_BLOCK_CHARS = 200
+LEAD_CHARS = 220               # a risk-factor heading is a sentence, not a label
+
+
+def _clip_words(text: str, limit: int) -> str:
+    """Trim to `limit` without splitting the last word."""
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    space = cut.rfind(" ")
+    if space > limit * 0.6:
+        cut = cut[:space]
+    return cut.rstrip(" ,;:-") + "\u2026"
 
 # Opens lowercase, or with a word that cannot begin a risk factor: the
 # continuation of one split across a page break. Deliberately NOT
@@ -42,11 +55,17 @@ class Block:
 
     @property
     def lead(self) -> str:
-        """The block's own heading where the filing marked one, else its first sentence."""
+        """The block's own heading where the filing marked one, else its first sentence.
+
+        Clipped on a word boundary. A hard character cut ended these mid-word
+        ("...generally competitive, cycl"), and the lead is what an added risk
+        factor is matched against the removed one it replaces — a broken last
+        word costs exactly the comparison the lead exists for.
+        """
         if self.heading:
-            return self.heading[:180]
+            return _clip_words(self.heading, LEAD_CHARS)
         head = re.split(r"(?<=[.!?])\s", self.text.strip(), maxsplit=1)[0]
-        return head[:180]
+        return _clip_words(head, LEAD_CHARS)
 
 
 @dataclass(frozen=True)
