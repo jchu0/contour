@@ -744,7 +744,10 @@ def scan(client: EdgarClient, ticker: str, *, debug: bool = False) -> Report:
                 findings=report.findings, unavailable=len(report.unavailable),
             )
             record_findings(connection, scan_id, company.ticker, [
-                (check.key, item.headline, item.severity)
+                (check.key, item.headline, item.severity,
+                 item.source.url if item.source else "",
+                 item.source.klass.letter if item.source else "",
+                 item.source.document_date.isoformat() if item.source else "")
                 for check in report.checks for item in check.items
             ])
     except Exception:  # noqa: BLE001 — recording history must never fail a scan
