@@ -345,6 +345,9 @@ CREATE TABLE IF NOT EXISTS scan_findings (
     fingerprint TEXT NOT NULL,
     headline    TEXT NOT NULL,
     severity    TEXT NOT NULL DEFAULT '',
+    url         TEXT NOT NULL DEFAULT '',
+    klass       TEXT NOT NULL DEFAULT '',
+    source_date TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (scan_id, fingerprint)
 );
 CREATE INDEX IF NOT EXISTS scan_findings_ticker ON scan_findings (ticker, scan_id);
@@ -365,26 +368,62 @@ class Delta:
 
 def _ensure_findings(connection: sqlite3.Connection) -> None:
     connection.executescript(_FINDINGS_SCHEMA)
+    # A finding used to be recorded without where it came from, so nothing
+    # outside a live scan could link back to the source. Databases written
+    # before that get the columns added rather than rebuilt.
+    columns = {r["name"] for r in connection.execute("PRAGMA table_info(scan_findings)")}
+    for name in ("url", "klass", "source_date"):
+        if name not in columns:
+            connection.execute(
+                f"ALTER TABLE scan_findings ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
+    connection.commit()
 
 
 def record_findings(
     connection: sqlite3.Connection,
     scan_id: int,
     ticker: str,
-    rows: list[tuple[str, str, str]],
+    rows: list[tuple],
 ) -> None:
-    """rows: (check_key, headline, severity). Fingerprint is what makes a
-    finding 'the same finding' across scans — the check it came from plus its
-    headline, which carries the figures."""
+    """rows: (check_key, headline, severity[, url, klass, source_date]).
+
+    Fingerprint is what makes a finding 'the same finding' across scans — the
+    check it came from plus its headline, which carries the figures. The
+    source travels with it so a page that is not running a scan can still link
+    back to what was read.
+    """
     _ensure_findings(connection)
     connection.executemany(
         "INSERT OR IGNORE INTO scan_findings"
-        " (scan_id, ticker, check_key, fingerprint, headline, severity)"
-        " VALUES (?, ?, ?, ?, ?, ?)",
-        [(scan_id, ticker.upper(), key, f"{key}|{headline}", headline, sev)
-         for key, headline, sev in rows],
+        " (scan_id, ticker, check_key, fingerprint, headline, severity,"
+        "  url, klass, source_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [(scan_id, ticker.upper(), row[0], f"{row[0]}|{row[1]}", row[1], row[2],
+          row[3] if len(row) > 3 else "", row[4] if len(row) > 4 else "",
+          row[5] if len(row) > 5 else "")
+         for row in rows],
     )
     connection.commit()
+
+
+def recent_source_items(connection: sqlite3.Connection, tickers: list[str],
+                        limit: int = 8) -> list[dict]:
+    """Latest corroborating hits for these companies, newest first.
+
+    Class C-F only: this is what the declared feeds turned up, not a finding
+    computed from a filing, and the two must not share a list.
+    """
+    if not tickers:
+        return []
+    _ensure_findings(connection)
+    marks = ",".join("?" * len(tickers))
+    rows = connection.execute(
+        f"SELECT ticker, headline, url, klass, source_date, MAX(scan_id) AS seen"
+        f" FROM scan_findings WHERE ticker IN ({marks}) AND url != ''"
+        f"   AND klass NOT IN ('A', 'B')"
+        f" GROUP BY url ORDER BY source_date DESC, seen DESC LIMIT ?",
+        [t.upper() for t in tickers] + [limit],
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def latest_delta(connection: sqlite3.Connection, ticker: str) -> Delta | None:
