@@ -230,6 +230,7 @@ font-variant-numeric:tabular-nums}
 .spark.down .spark-line,.spark.down .spark-end{stroke:var(--high);fill:none}
 .spark.down .spark-area,.spark.down .spark-end{fill:var(--high)}
 .price b{font-family:var(--mono);font-size:.75rem;font-variant-numeric:tabular-nums}
+.price b.last{font-size:.8125rem;color:var(--ink);min-width:4.5rem;text-align:right}
 .price b.up{color:var(--pass)}
 .price b.down{color:var(--high)}
 .chip{font-family:var(--mono);font-size:.6875rem;padding:.15rem .5rem;
@@ -1546,13 +1547,15 @@ def _price_cell(ticker: str) -> str:
     try:
         from ledger.charts import sparkline_svg
         from ledger.prices import daily_closes
-        svg, change = sparkline_svg(daily_closes(ticker))
+        closes = daily_closes(ticker)
+        svg, change = sparkline_svg(closes)
     except Exception:  # noqa: BLE001 — a price feed must never cost the page
         return '<span class="sub">—</span>'
     if not svg or change is None:
         return '<span class="sub">—</span>'
+    last = closes[max(closes)]
     tone = "up" if change >= 0 else "down"
-    return (f'<span class="price">{svg}'
+    return (f'<span class="price"><b class="last">${last:,.2f}</b>{svg}'
             f'<b class="{tone}">{change:+.1f}%</b></span>')
 
 
@@ -1607,14 +1610,12 @@ def _watchlist_table() -> str:
                  f'<td class="sub">{esc(t.last_scan or "—")}</td>'
                  f'<td class="num">{t.scans:,}</td>'
                  f'<td class="num">{t.baseline_facts:,}</td>'
-                 f'<td class="price-cell">{_price_cell(t.ticker)}</td>'
                  f"<td>{delta}</td>"
                  f'<td class="go"><a href="/scan?a={esc(t.ticker)}">Scan ›</a></td></tr>')
     return (f'<div class="wl"><table><thead><tr><th scope="col">Ticker</th>'
             f'<th scope="col">Company</th><th scope="col">Last scan</th>'
             f'<th scope="col" class="num">Scans</th>'
             f'<th scope="col" class="num">Baseline figures</th>'
-            f'<th scope="col">Price · 6mo</th>'
             f'<th scope="col">Since last scan</th><th scope="col"></th></tr></thead>'
             f"<tbody>{body}</tbody></table></div>")
 
@@ -1716,7 +1717,7 @@ def _overview_watchlist(connection) -> str:
         )
     return (f'<table class="grid"><thead><tr><th>Company</th><th class="num">Scans</th>'
             f'<th class="num">Figures</th><th class="num">Added</th>'
-            f'<th>Price · 6mo</th>'
+            f'<th>Price · 6mo trend</th>'
             f'<th>Since last scan</th><th class="num">Last scan</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody></table>')
 
@@ -3039,7 +3040,6 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             f'<td class="num">{t.scans}</td>'
             f'<td class="num">{t.baseline_facts:,}</td>'
             f'<td class="num">{("+" + format(t.facts_added, ",")) if t.facts_added else "—"}</td>'
-            f'<td class="price-cell">{_price_cell(t.ticker)}</td>'
             f"<td>{delta_cell(t.ticker)}</td>"
             f"<td>{_cadence_cell(t)}</td>"
             f'<td><form class="edit-only" method="post" action="/untrack">'
@@ -3053,7 +3053,7 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             '<th scope="col">Baseline taken</th><th scope="col">Last scan</th>'
             '<th scope="col" class="num">Scans</th><th scope="col" class="num">Baseline figures</th>'
             '<th scope="col" class="num">Added since</th>'
-            '<th scope="col">Price · 6mo</th><th scope="col">Since last scan</th>'
+            '<th scope="col">Since last scan</th>'
             '<th scope="col">Rescan every</th><th scope="col"></th>'
             f"</tr></thead><tbody>{body_rows}</tbody></table></div>"
         )
