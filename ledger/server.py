@@ -173,6 +173,27 @@ padding:.6rem .8rem;border-bottom:1px solid var(--rule)}
 font-variant-numeric:tabular-nums}
 .wl td.go{text-align:right;white-space:nowrap}
 .wl td.go a{font-family:var(--mono);font-size:.75rem}
+.market{display:flex;flex-direction:column;gap:.85rem;padding:1.2rem 1.35rem;
+background:var(--surface);border:1px solid var(--rule)}
+.market-head{display:flex;flex-direction:column;gap:.15rem}
+.market-head h2{font-family:var(--sans);font-size:1.0625rem;font-weight:600;margin:0}
+.market .who{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.pricechart{display:block;width:100%;height:9.375rem;overflow:visible}
+.pc-line{fill:none;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.pc-area{stroke:none;opacity:.1}
+.pc-dot{stroke:none}
+.pricechart.up .pc-line{stroke:var(--pass)}
+.pricechart.up .pc-area,.pricechart.up .pc-dot{fill:var(--pass)}
+.pricechart.down .pc-line{stroke:var(--high)}
+.pricechart.down .pc-area,.pricechart.down .pc-dot{fill:var(--high)}
+.market-facts{display:flex;flex-wrap:wrap;gap:0 2rem;padding-top:.85rem;
+border-top:1px solid var(--rule)}
+.market-facts span{display:flex;flex-direction:column;gap:.1rem}
+.market-facts b{font-family:var(--mono);font-size:.9375rem;font-weight:500;
+font-variant-numeric:tabular-nums}
+.market-facts small{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.market-facts small.up{color:var(--pass)}
+.market-facts small.down{color:var(--high)}
 .price{display:flex;align-items:center;gap:.5rem}
 .price-cell{white-space:nowrap}
 .spark{display:block;flex:none;overflow:visible}
@@ -1453,6 +1474,38 @@ def _price_cell(ticker: str) -> str:
             f'<b class="{tone}">{change:+.1f}%</b></span>')
 
 
+def _price_panel(ticker: str) -> str:
+    """A year of closes beside the report.
+
+    Kept visibly apart from the findings and labelled as market data. Every
+    other figure on this page was computed from a filing and cites it; this one
+    was not, and a reader must not have to work that out for themselves.
+    """
+    try:
+        from ledger.charts import price_chart_svg
+        from ledger.prices import daily_closes
+        chart = price_chart_svg(daily_closes(ticker))
+    except Exception:  # noqa: BLE001 — a price feed must never cost a report
+        return ""
+    if not chart:
+        return ""
+    first_day, first_value = chart["first"]
+    last_day, last_value = chart["last"]
+    tone = "up" if chart["change"] >= 0 else "down"
+    return f"""<section class="market">
+<div class="market-head"><h2>Market context</h2>
+<span class="who">Closing prices · not from a filing · nothing here is a finding</span></div>
+{chart["svg"]}
+<div class="market-facts">
+<span><b>{chart["change"]:+.1f}%</b><small class="{tone}">over the period</small></span>
+<span><b>${last_value:,.2f}</b><small>{esc(last_day.isoformat())}</small></span>
+<span><b>${chart["high"]:,.2f}</b><small>high</small></span>
+<span><b>${chart["low"]:,.2f}</b><small>low</small></span>
+<span><b>${first_value:,.2f}</b><small>{esc(first_day.isoformat())}</small></span>
+</div>
+</section>"""
+
+
 def _watchlist_table() -> str:
     rows = _tracked()
     if not rows:
@@ -2102,6 +2155,7 @@ def _column(report: Report, elapsed: float, solo: bool = True) -> str:
 {_verdict(report, elapsed)}
 {summary_html(_brief(report))}
 {_brief_html(_analyst(report))}
+{_price_panel(report.ticker)}
 {visuals_html(report)}
 {gap_block if gaps_first else ""}
 {body}
@@ -2868,6 +2922,7 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             f'<td class="num">{t.scans}</td>'
             f'<td class="num">{t.baseline_facts:,}</td>'
             f'<td class="num">{("+" + format(t.facts_added, ",")) if t.facts_added else "—"}</td>'
+            f'<td class="price-cell">{_price_cell(t.ticker)}</td>'
             f"<td>{delta_cell(t.ticker)}</td>"
             f"<td>{_cadence_cell(t)}</td>"
             f'<td><form class="edit-only" method="post" action="/untrack">'
@@ -2880,7 +2935,8 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             '<th scope="col">Ticker</th><th scope="col">Company</th>'
             '<th scope="col">Baseline taken</th><th scope="col">Last scan</th>'
             '<th scope="col" class="num">Scans</th><th scope="col" class="num">Baseline figures</th>'
-            '<th scope="col" class="num">Added since</th><th scope="col">Since last scan</th>'
+            '<th scope="col" class="num">Added since</th>'
+            '<th scope="col">Price · 6mo</th><th scope="col">Since last scan</th>'
             '<th scope="col">Rescan every</th><th scope="col"></th>'
             f"</tr></thead><tbody>{body_rows}</tbody></table></div>"
         )

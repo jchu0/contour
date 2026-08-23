@@ -199,3 +199,49 @@ def sparkline_svg(closes: dict, *, days: int = 180, width: int = 132,
         f"</svg>",
         change,
     )
+
+
+def price_chart_svg(closes: dict, *, days: int = 365, width: int = 640,
+                    height: int = 150) -> dict | None:
+    """A price line with its own extremes labelled, or None.
+
+    Market data, drawn deliberately unlike the finding charts: no thresholds,
+    no flags, no severity colour. It answers "what did the market do while this
+    was being filed", which is context, not evidence.
+    """
+    if not closes:
+        return None
+    from datetime import date, timedelta
+
+    cutoff = date.today() - timedelta(days=days)
+    points = [(d, v) for d, v in sorted(closes.items()) if d >= cutoff]
+    if len(points) < 20:
+        return None
+    values = [v for _, v in points]
+    low, high = min(values), max(values)
+    span = (high - low) or 1.0
+    pad = 18
+    inner = height - pad * 2
+    step = width / (len(values) - 1)
+    coords = [(i * step, pad + inner - ((v - low) / span) * inner)
+              for i, v in enumerate(values)]
+    line = "M" + " L".join(f"{x:.1f} {y:.1f}" for x, y in coords)
+    area = f"{line} L{coords[-1][0]:.1f} {height} L0 {height} Z"
+    change = ((values[-1] - values[0]) / values[0] * 100) if values[0] else 0.0
+    tone = "up" if change >= 0 else "down"
+    peak = coords[values.index(high)]
+    trough = coords[values.index(low)]
+    return {
+        "svg": (
+            f'<svg class="pricechart {tone}" viewBox="0 0 {width} {height}" '
+            f'preserveAspectRatio="none" role="img" '
+            f'aria-label="Closing price over the period">'
+            f'<path class="pc-area" d="{area}"/>'
+            f'<path class="pc-line" d="{line}"/>'
+            f'<circle class="pc-dot" cx="{peak[0]:.1f}" cy="{peak[1]:.1f}" r="2.5"/>'
+            f'<circle class="pc-dot" cx="{trough[0]:.1f}" cy="{trough[1]:.1f}" r="2.5"/>'
+            f"</svg>"
+        ),
+        "first": points[0], "last": points[-1],
+        "high": high, "low": low, "change": change, "points": len(points),
+    }
