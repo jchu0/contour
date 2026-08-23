@@ -451,3 +451,81 @@ def append_source(table: dict, path: Path = SOURCES_DIR / "custom.toml") -> Cust
     with open(path, "a", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     return source
+
+
+def _blocks(text: str) -> list[tuple[int, int]]:
+    """(start, end) line indexes for every [[source]] block in a file.
+
+    Text surgery rather than parse-and-rewrite: these files are hand-editable
+    and carry comments explaining each source. Round-tripping through a TOML
+    writer would silently throw those away.
+    """
+    lines = text.splitlines()
+    starts = [i for i, line in enumerate(lines) if line.strip() == "[[source]]"]
+    spans = []
+    for n, start in enumerate(starts):
+        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        spans.append((start, end))
+    return spans
+
+
+def _named(text: str, name: str) -> tuple[int, int]:
+    """The span of the block declaring `name`, or raise."""
+    lines = text.splitlines()
+    for start, end in _blocks(text):
+        for line in lines[start:end]:
+            stripped = line.strip()
+            if not stripped.startswith("name"):
+                continue
+            key, _, value = stripped.partition("=")
+            if key.strip() == "name" and value.strip().strip('"') == name:
+                return start, end
+    raise SourceError(f"no source named {name!r} in this file")
+
+
+def set_source_enabled(name: str, enabled: bool,
+                       directory: Path = SOURCES_DIR) -> CustomSource:
+    """Turn one declared source on or off in place.
+
+    Off is a state a source can be in, not a reason to delete it: the
+    declaration, its entity mappings and its extract paths all survive, so
+    turning it back on is one click rather than a re-declaration.
+    """
+    for source in load_sources(directory)[0]:
+        if source.name != name or source.path is None:
+            continue
+        text = source.path.read_text(encoding="utf-8")
+        start, end = _named(text, name)
+        lines = text.splitlines()
+        value = "true" if enabled else "false"
+        for i in range(start, end):
+            key, sep, _ = lines[i].strip().partition("=")
+            if sep and key.strip() == "enabled":
+                lines[i] = f"enabled = {value}"
+                break
+        else:
+            # Insert directly under [[source]]: anything lower may already be
+            # inside a [source.extract] sub-table, where the key would change
+            # meaning rather than the source.
+            lines.insert(start + 1, f"enabled = {value}")
+        source.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        for updated in load_sources(directory)[0]:
+            if updated.name == name:
+                return updated
+    raise SourceError(f"{name} is not a declared source")
+
+
+def remove_source(name: str, directory: Path = SOURCES_DIR) -> str:
+    """Delete one declared source, leaving the file and its comments behind."""
+    for source in load_sources(directory)[0]:
+        if source.name != name or source.path is None:
+            continue
+        text = source.path.read_text(encoding="utf-8")
+        start, end = _named(text, name)
+        lines = text.splitlines()
+        del lines[start:end]
+        while lines and not lines[-1].strip():
+            lines.pop()
+        source.path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return source.path.name
+    raise SourceError(f"{name} is not a declared source")
