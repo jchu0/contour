@@ -444,10 +444,12 @@ def summary_html(summary) -> str:
     paragraphs = "".join(
         f"<p>{esc(p.strip())}</p>" for p in summary.text.split("\n") if p.strip()
     )
+    stamp = (f" · written {esc(summary.written)}" if getattr(summary, "written", None)
+             else "")
     return (
         f'<section class="brief"><h2>Executive summary</h2>'
         f'<span class="who">Written by {esc(summary.model or "a language model")} '
-        f"from the computed findings below</span>"
+        f"from the computed findings below{stamp}</span>"
         f"{paragraphs}</section>"
     )
 

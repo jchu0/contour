@@ -14,9 +14,13 @@ any other check. It is an addition to the report, never a dependency of it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import hashlib
+import json
+from dataclasses import dataclass, replace
+from datetime import date
 
-from ledger.agents import MODEL, call
+from ledger import profile
+from ledger.agents import MODEL, call, credentials
 from ledger.report import Report, Status
 
 MAX_TOKENS = 1600
@@ -53,6 +57,41 @@ class Summary:
     model: str | None = None
     available: bool = True
     reason: str | None = None
+    written: str | None = None
+    cached: bool = False
+    material: str = ""
+
+
+def _summaries_dir():
+    return profile.config_dir() / "summaries"
+
+
+def material_fingerprint(text: str) -> str:
+    """What the summary was written from, in twelve characters."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def load_cached(ticker: str) -> Summary | None:
+    path = _summaries_dir() / f"{ticker.upper()}.json"
+    if not path.exists():
+        return None
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return Summary(text=str(stored.get("text", "")), model=stored.get("model"),
+                   written=stored.get("written"), cached=True,
+                   material=str(stored.get("material", "")))
+
+
+def save_summary(ticker: str, summary: Summary) -> None:
+    path = _summaries_dir() / f"{ticker.upper()}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "ticker": ticker.upper(), "model": summary.model,
+        "written": summary.written or date.today().isoformat(),
+        "material": summary.material, "text": summary.text,
+    }, indent=2) + "\n", encoding="utf-8")
 
 
 def findings_brief(report: Report) -> str:
@@ -91,13 +130,31 @@ def findings_brief(report: Report) -> str:
     return "\n".join(lines)
 
 
-def executive_summary(report: Report, *, model: str = MODEL) -> Summary:
+def executive_summary(report: Report, *, model: str = MODEL,
+                      use_cache: bool = True) -> Summary:
     """Narrate the findings. Never a dependency — a failure here is reported,
-    not raised, and the report stands without it."""
+    not raised, and the report stands without it.
+
+    Reused whenever the findings behind it have not changed. A summary
+    describes one scan; rewriting it on every view of the same report would
+    bill for it each time and let the wording drift between two readings.
+    """
     if not report.findings and not report.unavailable:
         return Summary("", available=False,
                        reason="nothing to summarise — no findings and nothing withheld")
-    text, reason = call(SYSTEM, findings_brief(report), model=model, max_tokens=MAX_TOKENS)
+    material = findings_brief(report)
+    fingerprint = material_fingerprint(material)
+    cached = load_cached(report.ticker) if use_cache else None
+    if cached and cached.material == fingerprint:
+        return cached
+    if credentials() is not None:
+        if cached:
+            return cached
+        return Summary("", available=False, reason=credentials())
+    text, reason = call(SYSTEM, material, model=model, max_tokens=MAX_TOKENS)
     if reason:
         return Summary("", available=False, reason=reason)
-    return Summary(text, model=model)
+    summary = Summary(text, model=model, written=date.today().isoformat(),
+                      material=fingerprint)
+    save_summary(report.ticker, summary)
+    return summary
