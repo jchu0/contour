@@ -538,8 +538,18 @@ line-height:1.35}
 .src-id h3{font-family:var(--sans);font-size:.9375rem;font-weight:600;margin:0;
 line-height:1.3}
 .src-id p{margin:0;font-size:.8125rem;color:var(--ink-2);line-height:1.45}
+.url-row{display:flex;align-items:baseline;gap:.5rem;min-width:0}
+/* The template is often longer than the column. It stays on one line so the
+   rows keep their rhythm, but a double-click takes all of it, and the button
+   takes it without one. */
 .src-id .url{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
-white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis;user-select:all;
+flex:0 1 auto;min-width:0}
+.copy{flex:none;font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;
+text-transform:uppercase;padding:.1rem .4rem;background:none;color:var(--ink-3);
+border:1px solid var(--rule);cursor:pointer}
+.copy:hover{border-color:var(--accent);color:var(--accent)}
+.copy.done{border-color:var(--pass);color:var(--pass)}
 .src-klass{display:flex;gap:.6rem;align-items:flex-start}
 .klass{display:grid;place-items:center;width:1.5rem;height:1.5rem;flex:none;
 font-family:var(--mono);font-size:.75rem;font-weight:600;
@@ -1503,6 +1513,35 @@ SOURCES_SCRIPT = """<script>
   });
   if (search) search.addEventListener('input', apply);
   if (klass) klass.addEventListener('change', apply);
+  document.querySelectorAll('.copy').forEach(function(button){
+    button.addEventListener('click', function(){
+      var url = button.getAttribute('data-copy');
+      var done = function(){
+        var was = button.textContent;
+        button.textContent = 'copied';
+        button.classList.add('done');
+        setTimeout(function(){
+          button.textContent = was;
+          button.classList.remove('done');
+        }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done, select);
+      } else {
+        select();
+      }
+      // No clipboard permission: select the text so the reader can copy it
+      // themselves rather than leaving the button silently dead.
+      function select(){
+        var span = button.previousElementSibling;
+        var range = document.createRange();
+        range.selectNodeContents(span);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+  });
 })();
 </script>"""
 
@@ -1536,7 +1575,9 @@ def _source_row(source: CustomSource) -> str:
 <div class="src-state"><span class="pill {state}">{esc(label)}</span>{note_html}</div>
 <div class="src-id"><h3>{esc(source.name)}</h3>
 {f'<p>{esc(source.note)}</p>' if source.note else ''}
-<span class="url" title="{esc(source.url)}">{esc(source.url)}</span></div>
+<span class="url-row"><span class="url" title="{esc(source.url)}">{esc(source.url)}</span>
+<button type="button" class="copy" data-copy="{esc(source.url)}"
+        aria-label="Copy the URL for {esc(source.name)}">copy</button></span></div>
 <div class="src-klass"><span class="klass {'low' if low else ''}">{source.klass.letter}</span>
 <span class="src-klass-body"><b>{esc(source.klass.label)}</b>
 <span class="sub">{"can mark findings verified" if source.klass.letter == "A"
@@ -1726,7 +1767,7 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 {_pager(len(sources), len(sources), "")}
 </section>
 
-<section class="check">
+<section class="check" id="mappings">
 <div class="check-head"><h2>Company name mappings</h2></div>
 {mapping_table}
 <form class="inline" method="post" action="/entities/set">
@@ -1737,7 +1778,7 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 </section>
 
 <div class="srcband">
-<section class="check">
+<section class="check" id="shortcuts">
 <div class="check-head"><h2>Scan shortcuts</h2></div>
 <div class="presets">{_preset_chips()}</div>
 {_pager(len(presets), len(presets), "", compact=True) if presets else ""}
@@ -1749,7 +1790,7 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 </form>
 </section>
 
-<section class="check">
+<section class="check" id="declare">
 <div class="check-head"><h2>Declare a source</h2></div>
 <form class="add" method="post" action="/sources/add">
 <div class="fieldset"><span class="eyebrow">1 · What it is</span>
@@ -1856,13 +1897,32 @@ def set_entities_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes
     )
 
 
+class SeeOther(Exception):
+    """Post/Redirect/Get. Rendering the page straight from the POST sends the
+    reader back to the top of it; removing the fourth shortcut of six should
+    leave them looking at the shortcuts."""
+
+    def __init__(self, location: str) -> None:
+        super().__init__(location)
+        self.location = location
+
+
+def _back_to(anchor: str, message: str = "", error: str = "") -> SeeOther:
+    query = ""
+    if message:
+        query = "?ok=" + quote(message)
+    elif error:
+        query = "?err=" + quote(error)
+    return SeeOther(f"/sources{query}#{anchor}")
+
+
 def remove_preset_route(form: dict[str, list[str]]) -> bytes:
     ticker = (form.get("ticker", [""])[0] or "").strip().upper()
     try:
         remove_preset(ticker)
     except (ValueError, OSError) as exc:
-        return sources_page(error=f"Not removed — {exc}")
-    return sources_page(message=f"Removed {ticker} from the scan shortcuts.")
+        raise _back_to("shortcuts", error=f"Not removed — {exc}")
+    raise _back_to("shortcuts", message=f"Removed {ticker} from the scan shortcuts.")
 
 
 def tracked_page(message: str = "", error: str = "") -> bytes:
@@ -2518,7 +2578,9 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/tracked":
                 payload = tracked_page()
             elif parsed.path == "/sources":
-                payload = sources_page()
+                query = parse_qs(parsed.query)
+                payload = sources_page(message=(query.get("ok", [""])[0]),
+                                       error=(query.get("err", [""])[0]))
             elif parsed.path == "/add":
                 payload = add_page()
             elif parsed.path == "/compare":
@@ -2590,6 +2652,11 @@ class Handler(BaseHTTPRequestHandler):
                 payload = remove_preset_route(form)
             else:
                 payload = sources_page()
+        except SeeOther as redirect:
+            self.send_response(303)
+            self.send_header("Location", redirect.location)
+            self.end_headers()
+            return
         except Exception:  # noqa: BLE001 — never return a bare 500 to the browser
             payload = _page("Error", f'<div class="error"><p>{esc(traceback.format_exc()[-600:])}</p></div>')
         self._respond(payload)
