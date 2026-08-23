@@ -1,0 +1,18 @@
+# How each company is named in sources that are not keyed on CIK.
+#
+# Managed from the app at /sources. Every entry is stated by a person — that is
+# the point. Sources like NHTSA are keyed on manufacturer, not CIK, and a name
+# search against them returns the wrong company often enough that a false
+# positive on a safety or enforcement record is worse than no record at all.
+# A form is fine; guessing is not.
+#
+#   [TSLA]
+#   nhtsa_make = "tesla"
+#   "Federal Register" = "Tesla"
+
+[NVDA]
+"Hacker News mentions" = "NVIDIA"
+
+[RIVN]
+"Federal Register" = "Rivian"
+nhtsa_make = "rivian"

@@ -1,0 +1,29 @@
+# Shortcut buttons on the scan page.
+#
+# Managed from the app at /sources — edits here are picked up on the next page
+# load, no restart. Pure convenience: any of the ~10,400 SEC-registered tickers
+# can be typed into the box without appearing here.
+
+[[preset]]
+ticker = "TSLA"
+note = "flags on every check"
+
+[[preset]]
+ticker = "AAPL"
+note = "clean financials, qualified claims"
+
+[[preset]]
+ticker = "RIVN"
+note = "regulatory credits, heavy filing turnover"
+
+[[preset]]
+ticker = "DIS"
+note = "heavy risk-factor turnover"
+
+[[preset]]
+ticker = "NVDA"
+note = "control — nothing flagged"
+
+[[preset]]
+ticker = "XOM"
+note = "successor entity, most checks unavailable"

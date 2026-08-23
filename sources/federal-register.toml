@@ -1,0 +1,28 @@
+# Federal Register — regulatory actions naming a company.
+#
+# Free, no key. The term search is loose, so `match` requires the entity name to
+# appear in the title; without it a search for "Tesla" returns solar-cell rulings
+# and hazardous-materials notices belonging to other companies entirely.
+
+[[source]]
+name = "Federal Register"
+class = "A"
+kind = "json"
+severity = "info"
+note = "Regulatory actions and notices naming the company"
+url = "https://www.federalregister.gov/api/v1/documents.json?conditions[term]={entity}&per_page=20&order=newest&fields[]=title&fields[]=publication_date&fields[]=html_url&fields[]=type"
+
+[source.entities]
+TSLA = "Tesla"
+AAPL = "Apple Inc"
+F = "Ford Motor"
+PFE = "Pfizer"
+BA = "Boeing"
+
+[source.extract]
+items = "results"
+title = "title"
+detail = "type"
+date = "publication_date"
+link = "html_url"
+match = "title"

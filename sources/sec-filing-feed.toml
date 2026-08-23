@@ -1,0 +1,18 @@
+# Every recent filing for a company, straight from EDGAR's Atom feed.
+#
+# Keyed on CIK, so no entity mapping is needed — a CIK is exact where a name is
+# not. This is the shape a user source should take when the identifier is solid.
+
+[[source]]
+name = "SEC filing feed"
+class = "A"
+kind = "rss"
+severity = "info"
+note = "Most recent filings of any form type"
+url = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type=&dateb=&owner=include&count=6&output=atom"
+
+[source.extract]
+title = "title"
+detail = "summary"
+date = "updated"
+link = "link"

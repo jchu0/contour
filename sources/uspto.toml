@@ -1,0 +1,40 @@
+# USPTO Open Data Portal.
+#
+# Requires a free API key: https://developer.uspto.gov/  → set USPTO_API_KEY.
+# The key is read from the environment at request time; it is never written here.
+#
+# TRADEMARKS ARE NOT HERE, and that matters because trademarks — not patents —
+# are the leading indicator worth having. A trademark filing can reveal an
+# unannounced product name; a patent publishes 18 months after filing and is a
+# lagging signal by construction. Probing the ODP, every trademark route returns
+# the same 403 as a deliberately bogus path, while patent/applications/search
+# returns 401 — so the patent route exists and the trademark ones do not.
+# Trademark data needs TSDR (per serial number, not searchable by owner) or the
+# bulk XML at bulkdata.uspto.gov. Neither fits a live scan.
+#
+# Left disabled: the route is confirmed but the response shape has not been seen
+# without a key, so the extract paths below are unverified. Get a key, flip
+# enabled, and correct the paths on the first run.
+
+[[source]]
+name = "USPTO patents"
+class = "A"
+kind = "json"
+severity = "info"
+enabled = false
+note = "Published applications — lags filing by ~18 months"
+url = "https://api.uspto.gov/api/v1/patent/applications/search?q=applicationMetaData.firstApplicantName:%22{entity}%22&limit=10"
+
+[source.headers]
+X-API-KEY = "${USPTO_API_KEY}"
+
+[source.entities]
+TSLA = "Tesla, Inc."
+AAPL = "Apple Inc."
+NVDA = "Nvidia Corporation"
+
+[source.extract]
+items = "patentFileWrapperDataBag"
+title = "applicationMetaData.inventionTitle"
+detail = "applicationMetaData.applicationStatusDescriptionText"
+date = "applicationMetaData.filingDate"

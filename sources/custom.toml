@@ -1,0 +1,19 @@
+
+[[source]]
+name = "Hacker News mentions"
+class = "F"
+url = "https://hn.algolia.com/api/v1/search_by_date?query={entity}&tags=story&hitsPerPage=10"
+kind = "json"
+severity = "info"
+note = "Community discussion volume — corroboration only"
+
+[source.entities]
+AAPL = "Apple"
+TSLA = "Tesla"
+
+[source.extract]
+items = "hits"
+title = "title"
+date = "created_at"
+link = "url"
+match = "title"

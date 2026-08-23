@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Accumulated state — the ledger, its profiles, and archived snapshots.
+# Every figure is re-derivable from public filings, so none of it belongs
+# in the repository.
+data/
+profiles/
+archive/
+out/
+
+# Local secrets. Contour needs SEC_USER_AGENT set to a real contact address
+# (the SEC rejects requests without one) and optionally ANTHROPIC_API_KEY.
+.env
+*.local.toml
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+
+# Per-deployment state that a scan writes, not configuration that ships:
+# pinned check rosters and model-proposed entity names awaiting review.
+config/authored/
+config/entities_proposed.json
