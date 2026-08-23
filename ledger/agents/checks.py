@@ -17,6 +17,7 @@ import json
 
 from ledger.agents import MODEL
 from ledger.authored import (
+    annual_series,
     MODES,
     SECTIONS,
     DIRECTIONS,

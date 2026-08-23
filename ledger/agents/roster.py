@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ledger.agents import MODEL, credentials
-from ledger.catalogue import Entry, by_key
+from ledger.catalogue import ANY, Entry, by_key
 
 RANK_SYSTEM = """You choose which checks a company should be given.
 
