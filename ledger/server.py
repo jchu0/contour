@@ -17,7 +17,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from ledger.api import delta_dict, dumps, index_dict, report_dict, sources_dict, tracked_dict
 from ledger.config import (
@@ -143,6 +143,83 @@ body:has(.report) .report-main{max-width:46rem;margin:0 auto;width:100%}
 .panel-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.6rem}
 .panel-head h2{margin:0;font-size:1rem;font-weight:600}
 .panel-head a{font-family:var(--mono);font-size:.75rem}
+/* -- scan: one company ------------------------------------------------- */
+form.scan input[type=text]{flex:0 1 21rem}
+.form-note{display:flex;align-items:center;font-family:var(--mono);font-size:.75rem;
+color:var(--ink-3)}
+.head-link{margin-left:auto;font-family:var(--mono);font-size:.75rem}
+.wl{border:1px solid var(--rule);overflow-x:auto}
+.wl table{width:100%;min-width:44rem;border-collapse:collapse;font-size:.875rem}
+.wl th{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3);text-align:left;font-weight:400;
+padding:.6rem .8rem;border-bottom:1px solid var(--rule)}
+.wl td{padding:.65rem .8rem;border-bottom:1px solid var(--rule)}
+.wl tr:last-child td{border-bottom:0}
+.wl td.tk{font-family:var(--mono);font-weight:600;color:var(--accent)}
+.wl td.sub{font-family:var(--mono);font-size:.8125rem;color:var(--ink-3)}
+.wl td.num,.wl th.num{text-align:right;font-family:var(--mono);
+font-variant-numeric:tabular-nums}
+.wl td.go{text-align:right;white-space:nowrap}
+.wl td.go a{font-family:var(--mono);font-size:.75rem}
+.chip{font-family:var(--mono);font-size:.6875rem;padding:.15rem .5rem;
+background:var(--surface-2);color:var(--ink-3);white-space:nowrap}
+.chip.warn{background:var(--med-soft);color:var(--med)}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip-link{font-family:var(--mono);font-size:.75rem;text-decoration:none;
+border:1px solid var(--rule);background:var(--surface);padding:.45rem .7rem;
+color:var(--ink-3)}
+.chip-link b{color:var(--accent)}
+.chip-link:hover{border-color:var(--accent)}
+/* -- compare: two sides, picked from the watchlist --------------------- */
+.picker{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+gap:0 1.25rem;align-items:start}
+.vs-rail{display:flex;justify-content:center;padding-top:3.2rem}
+.side{display:flex;flex-direction:column;gap:.6rem;min-width:0}
+.side-head{display:flex;align-items:baseline;gap:.75rem;padding-bottom:.5rem;
+border-bottom:1px solid var(--rule-strong)}
+.side-head .tk{margin-left:auto;font-family:var(--mono);font-size:.875rem;
+font-weight:600;color:var(--accent)}
+.pick-filter{display:flex;align-items:center;gap:.7rem}
+.pick-filter input[type=search]{flex:1 1 auto;min-width:0;font-family:var(--mono);
+font-size:.8125rem;padding:.5rem .6rem;background:var(--surface);color:var(--ink);
+border:1px solid var(--rule-strong);-webkit-appearance:none;appearance:none}
+.pick-filter input::placeholder{color:var(--ink-3)}
+.pick-filter .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+white-space:nowrap}
+/* The list scrolls rather than growing: a hundred tracked companies would
+   otherwise be a 7,000px column, and the commit bar would sit below both. */
+.picks{display:flex;flex-direction:column;gap:1px;background:var(--rule);
+border:1px solid var(--rule);max-height:24rem;overflow-y:auto}
+.pick[hidden]{display:none}
+.pick{display:flex;align-items:flex-start;gap:.7rem;padding:.7rem .85rem;
+background:var(--surface);cursor:pointer}
+.pick:hover{background:var(--surface-2)}
+.pick input{margin:.25rem 0 0;accent-color:var(--accent);flex:none}
+.pick:has(input:checked){background:var(--accent-soft)}
+.pick.taken{cursor:default;opacity:.55}
+.pick.taken:hover{background:var(--surface)}
+.pick-body{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.pick-id{display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap}
+.pick-id .tk{font-family:var(--mono);font-size:.8125rem;color:var(--accent)}
+.pick-id b{font-family:var(--sans);font-size:.875rem;font-weight:600}
+.pick .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.pick-note{margin-left:auto;font-family:var(--mono);font-size:.625rem;
+letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.pick-alt{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.pick-alt input[type=text]{flex:0 1 8rem;min-width:6rem;font-size:.8125rem;
+padding:.5rem .6rem}
+.pick-alt .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.commit{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;
+margin-top:1.5rem;padding-top:1.1rem;border-top:2px solid var(--ink)}
+.commit button{margin-left:auto}
+.commit-who,.commit-route{display:flex;flex-direction:column;gap:.2rem}
+.commit-pair{display:flex;align-items:baseline;gap:.5rem;font-family:var(--mono);
+font-size:1.0625rem;font-weight:600;color:var(--accent)}
+.commit .sub{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.commit-route code{font-family:var(--mono);font-size:.75rem;color:var(--ink-2)}
+.switcher-line{margin-bottom:1.25rem;display:flex}
+.switcher-line .head-link{margin-left:0}
+
 .switcher{margin-bottom:1.25rem}
 .switcher>summary{list-style:none;width:fit-content;cursor:pointer;
   font-family:var(--mono);font-size:.75rem;color:var(--ink-2);
@@ -622,16 +699,76 @@ def _page(title: str, body: str, current: str = "") -> bytes:
 {_VEIL}{NAV_SCRIPT}</body></html>""".encode()
 
 
-def _form(primary: str = "", secondary: str = "") -> str:
+def _form(primary: str = "") -> str:
+    """One company, one report.
+
+    This used to carry a second "Compare (optional)" field, which made /scan and
+    /compare the same screen under different headings. Comparison is its own
+    surface now, so the field that blurred them is gone.
+    """
     return f"""<form class="scan" method="get" action="/scan">
 <input type="text" name="a" placeholder="Ticker" value="{esc(primary)}"
        autocomplete="off" autofocus required>
-<span class="vs">vs</span>
-<input type="text" name="b" placeholder="Compare (optional)" value="{esc(secondary)}"
-       autocomplete="off">
 <button type="submit">Scan</button>
+<span class="form-note">one company · full report</span>
 </form>"""
 
+
+
+def _tracked() -> list:
+    """Tracked companies, newest scan first. Chrome must never take a page down."""
+    try:
+        with connect() as connection:
+            return list(tracked_companies(connection))
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _watchlist_table() -> str:
+    rows = _tracked()
+    if not rows:
+        return ('<p class="note">Nothing tracked yet. Scan a company, then take a '
+                "baseline to start watching it.</p>")
+    body = ""
+    for t in rows:
+        added = t.facts_now - t.baseline_facts
+        if added > 0:
+            delta = f'<span class="chip warn">+{added:,} figures</span>'
+        else:
+            delta = '<span class="chip">no change</span>'
+        body += (f'<tr><td class="tk">{esc(t.ticker)}</td>'
+                 f"<td>{esc(t.company)}</td>"
+                 f'<td class="sub">{esc(t.last_scan or "—")}</td>'
+                 f'<td class="num">{t.scans:,}</td>'
+                 f'<td class="num">{t.baseline_facts:,}</td>'
+                 f"<td>{delta}</td>"
+                 f'<td class="go"><a href="/scan?a={esc(t.ticker)}">Scan ›</a></td></tr>')
+    return (f'<div class="wl"><table><thead><tr><th scope="col">Ticker</th>'
+            f'<th scope="col">Company</th><th scope="col">Last scan</th>'
+            f'<th scope="col" class="num">Scans</th>'
+            f'<th scope="col" class="num">Baseline figures</th>'
+            f'<th scope="col">Since last scan</th><th scope="col"></th></tr></thead>'
+            f"<tbody>{body}</tbody></table></div>")
+
+
+def _recent_chips() -> str:
+    """Scanned lately but not tracked — the only thing the watchlist cannot show."""
+    tracked = {t.ticker for t in _tracked()}
+    seen: list[str] = []
+    try:
+        with connect() as connection:
+            for row in scan_history(connection, limit=12):
+                if row["ticker"] not in tracked and row["ticker"] not in seen:
+                    seen.append(row["ticker"])
+    except Exception:  # noqa: BLE001
+        return ""
+    if not seen:
+        return ""
+    links = "".join(
+        f'<a class="chip-link" href="/scan?a={esc(t)}"><b>{esc(t)}</b> · not tracked</a>'
+        for t in seen[:8])
+    return (f'<section class="check"><div class="check-head"><h2>Recently scanned</h2></div>'
+            f'<div class="chips">{links}</div></section>')
 
 def _suggestions() -> str:
     """Quick access to tracked companies, then recently scanned ones.
@@ -1170,7 +1307,8 @@ def _error(ticker: str, message: str) -> str:
 <p>{esc(hint)}</p><ul><li><b>{esc(message[:180])}</b></li></ul></div></div>"""
 
 
-def results(client: EdgarClient, tickers: list[str], notice: str = "") -> bytes:
+def results(client: EdgarClient, tickers: list[str], notice: str = "",
+            compare: bool = False) -> bytes:
     """Scan one or two companies; a second runs concurrently with the first."""
     def one(ticker: str):
         started = time.monotonic()
@@ -1198,14 +1336,22 @@ def results(client: EdgarClient, tickers: list[str], notice: str = "") -> bytes:
     banner = f'<div class="notice">{esc(notice)}</div>' if notice else ""
     # A report is a reading surface, not a launcher: the form folds away behind
     # one control instead of taking the first screen on every scan.
-    body = f"""<details class="switcher">
+    if compare:
+        switcher = (f'<a class="head-link" href="/compare?a={esc(tickers[0])}'
+                    f'&amp;b={esc(tickers[1] if len(tickers) > 1 else "")}">'
+                    "Change the pair ›</a>")
+        opener = f'<div class="switcher-line">{switcher}</div>'
+    else:
+        opener = f"""<details class="switcher">
 <summary>Scan another company</summary>
-{_form(*(tickers + [""])[:2])}
+{_form(tickers[0] if tickers else "")}
 {_suggestions()}
-</details>
+</details>"""
+    body = f"""{opener}
 {banner}
 <div class="{'wide' if comparing else 'columns'}">{columns}</div>"""
-    return _page(f"{names} — Contour", body, current="/scan")
+    return _page(f"{names} — Contour", body,
+                 current="/compare" if compare else "/scan")
 
 
 _FIELDS = [
@@ -1695,26 +1841,229 @@ def scan_page() -> bytes:
     verbatim — same heading, same active nav item — so clicking Scan looked
     like nothing had happened at all.
     """
+    ledger = _ledger_line()
     body = f"""<header class="masthead">
 <h1>Scan</h1>
 <p class="lede">Any of the ~10,400 SEC-registered tickers. Every figure is computed
 from a filing fetched now and cites the accession it came from.</p>
 {_form()}
 </header>
-{_suggestions()}"""
+<section class="check">
+<div class="check-head"><h2>Watchlist</h2>
+<a class="head-link" href="/tracked">Manage ›</a></div>
+{_watchlist_table()}
+</section>
+{_recent_chips()}
+{f'<footer>{esc(ledger)}</footer>' if ledger else ""}"""
     return _page("Scan — Contour", body, current="/scan")
 
 
-def compare_page() -> bytes:
-    """Pick two companies. The report itself is /scan with both tickers."""
-    recent = _suggestions()
+
+# The picker is server-rendered and correct without this: every state below is
+# also produced by a round trip. It exists so the commit bar answers a click
+# immediately rather than a page later — picking a company and still reading
+# "pick a company on each side" makes the page look broken.
+PICKER_SCRIPT = """<script>
+(function(){
+  var f = document.querySelector('.picker-form');
+  if (!f) return;
+  var who = f.querySelector('.commit-who');
+  var route = f.querySelector('.commit-route');
+  function side(name){
+    var raw = f.querySelector('input[name="' + name + '_raw"]');
+    if (raw && raw.value.trim()) return {t: raw.value.trim().toUpperCase(), c: ''};
+    var hit = f.querySelector('input[name="' + name + '"]:checked');
+    return hit ? {t: hit.value, c: hit.getAttribute('data-company') || ''} : {t: '', c: ''};
+  }
+  function paint(){
+    var a = side('a'), b = side('b');
+    f.querySelectorAll('.js-side-tk').forEach(function(el){
+      el.textContent = (el.getAttribute('data-side') === 'a' ? a.t : b.t) || '\u2014';
+    });
+    f.querySelectorAll('.pick').forEach(function(row){
+      var input = row.querySelector('input');
+      if (!input) return;
+      var far = input.name === 'a' ? b.t : a.t;
+      var taken = input.value === far && far !== '';
+      row.classList.toggle('taken', taken);
+      input.disabled = taken;
+      if (taken) input.checked = false;
+      var note = row.querySelector('.pick-note');
+      if (taken && !note) {
+        note = document.createElement('span');
+        note.className = 'pick-note';
+        note.textContent = 'on side ' + (input.name === 'a' ? 'B' : 'A');
+        row.appendChild(note);
+      } else if (!taken && note) {
+        note.remove();
+      }
+    });
+    var ready = a.t && b.t && a.t !== b.t;
+    who.innerHTML = '';
+    route.innerHTML = '';
+    if (!ready) {
+      who.appendChild(sub('Pick a company on each side.'));
+      return;
+    }
+    var pair = document.createElement('span');
+    pair.className = 'commit-pair';
+    pair.appendChild(bold(a.t));
+    var vs = document.createElement('span');
+    vs.className = 'vs';
+    vs.textContent = 'vs';
+    pair.appendChild(vs);
+    pair.appendChild(bold(b.t));
+    who.appendChild(pair);
+    who.appendChild(sub((a.c || a.t) + ' \u00b7 ' + (b.c || b.t)));
+    var code = document.createElement('code');
+    code.textContent = '/compare?a=' + a.t + '&b=' + b.t;
+    route.appendChild(code);
+    route.appendChild(sub('one row per check \u00b7 union of both rosters'));
+  }
+  function sub(text){
+    var el = document.createElement('span');
+    el.className = 'sub';
+    el.textContent = text;
+    return el;
+  }
+  function bold(text){
+    var el = document.createElement('b');
+    el.className = 'tk';
+    el.textContent = text;
+    return el;
+  }
+  // A watchlist of a hundred companies is two 7,000px columns of radio cards.
+  // Filtering in place beats paging here: on a picker you already know the
+  // ticker you want, and a page number is one more thing to hunt through.
+  function filter(box){
+    var side = box.getAttribute('data-side');
+    var term = box.value.trim().toLowerCase();
+    var shown = 0, total = 0;
+    f.querySelectorAll('.pick').forEach(function(row){
+      var input = row.querySelector('input');
+      if (!input || input.name !== side) return;
+      total++;
+      var hit = !term || row.textContent.toLowerCase().indexOf(term) !== -1;
+      row.hidden = !hit;
+      if (hit) shown++;
+    });
+    var count = f.querySelector('.js-pick-count[data-side="' + side + '"]');
+    if (count) {
+      count.textContent = term ? shown + ' of ' + total + ' shown'
+                               : total + ' tracked';
+    }
+  }
+  f.querySelectorAll('.js-pick-filter').forEach(function(box){
+    box.addEventListener('input', function(){ filter(box); });
+  });
+  f.addEventListener('change', paint);
+  f.addEventListener('input', paint);
+  // An empty text box still submits as a_raw=&b_raw=, so the address bar
+  // contradicts the route the commit bar just promised. Drop the empties.
+  f.addEventListener('submit', function(){
+    f.querySelectorAll('input[type=text]').forEach(function(box){
+      if (!box.value.trim()) box.disabled = true;
+    });
+  });
+  paint();
+})();
+</script>"""
+
+def _pair(query: dict) -> tuple[str, str]:
+    """Read one ticker per side.
+
+    Each side offers two inputs — the watchlist radio and the untracked box.
+    Typing is the more deliberate act, so a filled box wins over a radio that
+    may simply have carried over from the last render.
+    """
+    def one(key: str) -> str:
+        for name in (f"{key}_raw", key):
+            for value in query.get(name, []):
+                if value.strip():
+                    return value.strip().upper()
+        return ""
+    return one("a"), one("b")
+
+
+def _side(name: str, label: str, chosen: str, other: str) -> str:
+    """One column of the compare picker.
+
+    A company already picked on the far side is shown but not selectable: two
+    columns of the same company is a comparison of nothing, and disabling it
+    where it sits explains itself better than an error after the fact.
+    """
+    rows = ""
+    for t in _tracked():
+        taken = t.ticker == other
+        note = (f'<span class="pick-note">on side {"A" if name == "b" else "B"}</span>'
+                if taken else "")
+        rows += (f'<label class="pick{" taken" if taken else ""}">'
+                 f'<input type="radio" name="{name}" value="{esc(t.ticker)}"'
+                 f' data-company="{esc(t.company)}"'
+                 f'{" checked" if t.ticker == chosen and not taken else ""}'
+                 f'{" disabled" if taken else ""}>'
+                 f'<span class="pick-body"><span class="pick-id">'
+                 f'<b class="tk">{esc(t.ticker)}</b>'
+                 f"<b>{esc(t.company)}</b></span>"
+                 f'<span class="sub">last scan {esc(t.last_scan or "never")} · '
+                 f"{t.scans:,} scans · {t.baseline_facts:,} baseline figures</span></span>"
+                 f"{note}</label>")
+    if not rows:
+        rows = '<p class="note">Nothing tracked yet.</p>'
+    total = len(_tracked())
+    return f"""<div class="side">
+<div class="side-head"><span class="eyebrow">{esc(label)}</span>
+<span class="tk js-side-tk" data-side="{name}">{esc(chosen or "—")}</span></div>
+<div class="pick-filter">
+<input type="search" class="js-pick-filter" data-side="{name}"
+       placeholder="Filter tracked" autocomplete="off" aria-label="Filter {esc(label)}">
+<span class="sub js-pick-count" data-side="{name}">{total} tracked</span>
+</div>
+<div class="picks">{rows}</div>
+<div class="pick-alt"><span class="eyebrow">or untracked</span>
+<input type="text" name="{name}_raw" placeholder="Ticker" maxlength="8" autocomplete="off">
+<span class="sub">cold scan — no baseline</span></div>
+</div>"""
+
+
+def compare_page(a: str = "", b: str = "", error: str = "") -> bytes:
+    """Pick two tracked companies. The result is /compare with both tickers.
+
+    Comparison used to be the second field of the scan form, which made this
+    page a relabelled /scan. You are almost always comparing companies you
+    already track, so the watchlist — not a text box — is the instrument.
+    """
+    tracked = {t.ticker: t.company for t in _tracked()}
+    ready = bool(a and b and a != b)
+    pair = (f'<span class="commit-pair"><b class="tk">{esc(a)}</b>'
+            f'<span class="vs">vs</span><b class="tk">{esc(b)}</b></span>'
+            f'<span class="sub">{esc(tracked.get(a, a))} · {esc(tracked.get(b, b))}</span>'
+            if ready else
+            '<span class="sub">Pick a company on each side.</span>')
+    # Both spans are always rendered, even empty. The picker script fills them
+    # on every change; a span that only exists once a pair is chosen is a null
+    # the first keystroke trips over.
+    route = (f'<code>/compare?a={esc(a)}&amp;b={esc(b)}</code>'
+             f'<span class="sub">one row per check · union of both rosters</span>'
+             if ready else "")
+    flash = f'<div class="flash bad">{esc(error)}</div>' if error else ""
     body = f"""<header class="masthead">
 <h1>Compare</h1>
 <p class="lede">Two companies, one row per check. A check flagged on one side and
 unavailable on the other reads as a single horizontal glance.</p>
-{_form()}
 </header>
-{recent}"""
+{flash}
+<form class="picker-form" method="get" action="/compare">
+<div class="picker">
+{_side("a", "Side A", a, b)}
+<div class="vs-rail"><span class="vs">vs</span></div>
+{_side("b", "Side B", b, a)}
+</div>
+<div class="commit"><span class="commit-who">{pair}</span>
+<span class="commit-route">{route}</span>
+<button type="submit">Compare</button></div>
+</form>
+{PICKER_SCRIPT}"""
     return _page("Compare — Contour", body, current="/compare")
 
 
@@ -1902,7 +2251,15 @@ class Handler(BaseHTTPRequestHandler):
             elif parsed.path == "/add":
                 payload = add_page()
             elif parsed.path == "/compare":
-                payload = compare_page()
+                query = parse_qs(parsed.query)
+                a, b = _pair(query)
+                if a and b and a == b:
+                    payload = compare_page(a, "", error=f"{a} cannot be compared "
+                                           "with itself — pick a second company.")
+                elif a and b:
+                    payload = results(self.client, [a, b], compare=True)
+                else:
+                    payload = compare_page(a, b)
             elif parsed.path == "/scan":
                 query = parse_qs(parsed.query)
                 tickers = [
@@ -1911,7 +2268,16 @@ class Handler(BaseHTTPRequestHandler):
                     for t in query.get(key, [])
                     if t.strip()
                 ]
-                payload = results(self.client, tickers[:2]) if tickers else scan_page()
+                # A pair belongs to /compare now. Old links and bookmarks still
+                # carry ?a=&b=, so send them on rather than rendering a second
+                # comparison surface under the scan route.
+                if len(tickers) > 1:
+                    self.send_response(302)
+                    self.send_header(
+                        "Location", f"/compare?a={quote(tickers[0])}&b={quote(tickers[1])}")
+                    self.end_headers()
+                    return
+                payload = results(self.client, tickers[:1]) if tickers else scan_page()
             else:
                 payload = landing()
         except Exception:  # noqa: BLE001 — never return a bare 500 to the browser
