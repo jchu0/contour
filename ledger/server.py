@@ -238,7 +238,7 @@ font-variant-numeric:tabular-nums}
 .market-facts small{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
 .market-facts small.up{color:var(--pass)}
 .market-facts small.down{color:var(--high)}
-.price{display:flex;align-items:center;gap:.5rem}
+.price{display:flex;align-items:center;gap:.75rem}
 .price-cell{white-space:nowrap}
 .spark{display:block;flex:none;overflow:visible}
 .spark-line{fill:none;stroke-width:1.5;vector-effect:non-scaling-stroke}
@@ -249,6 +249,11 @@ font-variant-numeric:tabular-nums}
 .spark.down .spark-area,.spark.down .spark-end{fill:var(--high)}
 .price b{font-family:var(--mono);font-size:.75rem;font-variant-numeric:tabular-nums}
 .price b.last{font-size:.8125rem;color:var(--ink);min-width:4.5rem;text-align:right}
+/* One header doing two jobs: a letter-spaced middot between them read as
+   an uneven gap. Stacked, each label owns its own line. */
+.grid th.th-stack{line-height:1.3}
+.th-stack b{display:block;font-weight:inherit}
+.th-stack span{display:block;font-size:.625rem;opacity:.75;letter-spacing:.08em}
 .price b.up{color:var(--pass)}
 .price b.down{color:var(--high)}
 .chip{font-family:var(--mono);font-size:.6875rem;padding:.15rem .5rem;
@@ -1744,7 +1749,7 @@ def _overview_watchlist(connection) -> str:
         )
     return (f'<table class="grid"><thead><tr><th>Company</th><th class="num">Scans</th>'
             f'<th class="num">Figures</th><th class="num">Added</th>'
-            f'<th>Price · 6mo trend</th>'
+            f'<th class="th-stack"><b>Price</b><span>6mo trend</span></th>'
             f'<th>Since last scan</th><th class="num">Last scan</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody></table>')
 
