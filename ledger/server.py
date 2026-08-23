@@ -55,6 +55,7 @@ from ledger.sources import (
 )
 from ledger.agents.summary import executive_summary
 from ledger.store import (
+    recent_source_items,
     connect,
     coverage,
     latest_delta,
@@ -178,6 +179,19 @@ background:var(--surface);border:1px solid var(--rule)}
 .market-head{display:flex;flex-direction:column;gap:.15rem}
 .market-head h2{font-family:var(--sans);font-size:1.0625rem;font-weight:600;margin:0}
 .market .who{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.news-note{margin:0 0 .7rem;font-family:var(--mono);font-size:.6875rem;
+color:var(--ink-3);line-height:1.5}
+.news{display:flex;flex-direction:column;gap:1px;background:var(--rule);
+border:1px solid var(--rule)}
+.news-item{display:flex;flex-direction:column;gap:.2rem;padding:.6rem .8rem;
+background:var(--surface);text-decoration:none;color:inherit}
+.news-item:hover{background:var(--surface-2)}
+.news-head{font-size:.875rem;line-height:1.4;color:var(--ink)}
+.news-meta{display:flex;align-items:center;gap:.5rem;font-family:var(--mono);
+font-size:.6875rem;color:var(--ink-3)}
+.news-meta b{color:var(--accent);font-weight:600}
+.news-meta i{font-style:normal;display:grid;place-items:center;width:1rem;height:1rem;
+font-size:.625rem;font-weight:600;background:var(--surface-2);color:var(--ink-3)}
 .market-plot{position:relative}
 .pricechart{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
 .pc-line{fill:none;stroke-width:1.6}
@@ -1696,13 +1710,44 @@ def _overview_watchlist(connection) -> str:
             f'<td class="num">{t.scans}</td>'
             f'<td class="num">{t.facts_now:,}</td>'
             f'<td class="num">{t.facts_added:,}</td>'
+            f'<td class="price-cell">{_price_cell(t.ticker)}</td>'
             f'<td>{change}</td>'
             f'<td class="num sub">{esc(t.last_scan or "—")}</td></tr>'
         )
     return (f'<table class="grid"><thead><tr><th>Company</th><th class="num">Scans</th>'
             f'<th class="num">Figures</th><th class="num">Added</th>'
+            f'<th>Price · 6mo</th>'
             f'<th>Since last scan</th><th class="num">Last scan</th></tr></thead>'
             f'<tbody>{"".join(out)}</tbody></table>')
+
+
+def _overview_news(connection) -> str:
+    """What the declared feeds turned up for companies you watch.
+
+    Corroboration, and labelled as such — these are the Class C-F hits recorded
+    at scan time, not findings. They carry a link because the only useful thing
+    to do with a headline is read the thing it points at.
+    """
+    try:
+        watched = [t.ticker for t in tracked_companies(connection)]
+        rows = recent_source_items(connection, watched, limit=8)
+    except Exception:  # noqa: BLE001 — the page must render regardless
+        return ""
+    if not rows:
+        return ""
+    items = "".join(
+        f'<a class="news-item" href="{esc(row["url"])}" target="_blank" '
+        f'rel="noopener noreferrer">'
+        f'<span class="news-head">{esc(row["headline"])}</span>'
+        f'<span class="news-meta"><b>{esc(row["ticker"])}</b>'
+        f'<i class="klass low">{esc(row["klass"] or "?")}</i>'
+        f'{esc(row["source_date"] or "")}</span></a>'
+        for row in rows)
+    return (f'<section class="panel"><div class="panel-head"><h2>From the sources</h2>'
+            f'<a href="/sources">Manage &rarr;</a></div>'
+            f'<p class="news-note">Declared feeds, class C to F — corroboration, '
+            f"not findings. Nothing here has been checked against a filing.</p>"
+            f'<div class="news">{items}</div></section>')
 
 
 def _overview_recent(connection) -> str:
@@ -1803,12 +1848,13 @@ def _digest_html() -> str:
 
 
 def landing() -> bytes:
-    stats, watchlist, activity = {}, "", ""
+    stats, watchlist, activity, news = {}, "", "", ""
     try:
         with connect() as connection:
             stats = coverage(connection)
             watchlist = _overview_watchlist(connection)
             activity = _activity(connection)
+            news = _overview_news(connection)
     except Exception:  # noqa: BLE001 — the page must render on a cold database
         stats = {}
 
@@ -1818,6 +1864,7 @@ def landing() -> bytes:
 {_digest_html()}
 <section class="panel"><div class="panel-head"><h2>Watchlist</h2>
 <a href="/tracked">Manage &rarr;</a></div>{watchlist}</section>
+{news}
 </div>
 <aside class="ov-side">
 <div class="facts"><span class="ix-label">Ledger</span>{_fact_rows(stats)}</div>
