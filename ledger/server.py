@@ -51,6 +51,7 @@ from ledger.store import (
     latest_delta,
     scan_history,
     track_company,
+    set_cadence,
     tracked_companies,
     tracking,
     untrack_company,
@@ -66,11 +67,13 @@ DAILY_INTERVAL_SECONDS = 24 * 60 * 60
 
 
 def _daily_loop(client: EdgarClient, interval: int = DAILY_INTERVAL_SECONDS) -> None:
-    """Rescan tracked companies once a day, in the background.
+    """Wake once a day and rescan the companies that are due.
 
     Deliberately dumb: sleep, scan, repeat. It holds no schedule of its own, so
     restarting the server restarts the clock — which is the honest behaviour for
-    something that lives only as long as the process does.
+    something that lives only as long as the process does. What it does not do
+    is ignore cadence: a company set to weekly is skipped until a week has
+    passed since its last scan.
     """
     import datetime
     import time as _time
@@ -78,7 +81,7 @@ def _daily_loop(client: EdgarClient, interval: int = DAILY_INTERVAL_SECONDS) -> 
     while True:
         _time.sleep(interval)
         try:
-            rescan_tracked(client)
+            rescan_tracked(client, due_only=True)
             DAILY["last"] = datetime.date.today().isoformat()
         except Exception:  # noqa: BLE001 — a failed pass must not kill the thread
             continue
@@ -573,6 +576,13 @@ font-size:.6875rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-
 .pg-right select{font-family:var(--mono);font-size:.78125rem;height:2.125rem;
 padding:0 .5rem;background:var(--surface);color:var(--ink);
 border:1px solid var(--rule-strong);text-transform:none;letter-spacing:0}
+form.cadence{display:flex;align-items:center;gap:.35rem}
+form.cadence select{font-family:var(--mono);font-size:.75rem;padding:.25rem .35rem;
+background:var(--surface);color:var(--ink);border:1px solid var(--rule-strong)}
+form.cadence button{font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;
+text-transform:uppercase;padding:.25rem .45rem;background:none;color:var(--ink-3);
+border:1px solid var(--rule);cursor:pointer}
+form.cadence button:hover{border-color:var(--accent);color:var(--accent)}
 .pg-arrows{display:flex;gap:.4rem}
 .pg-arrow{display:grid;place-items:center;width:2.125rem;height:2.125rem;
 border:1px solid var(--rule);background:var(--surface)}
@@ -1925,6 +1935,38 @@ def remove_preset_route(form: dict[str, list[str]]) -> bytes:
     raise _back_to("shortcuts", message=f"Removed {ticker} from the scan shortcuts.")
 
 
+def _cadence_cell(t) -> str:
+    """How often the background pass should revisit this company.
+
+    `manual only` keeps the company tracked but never revisits it on a timer,
+    which is not the same as untracking it: the baseline stays, so a scan on
+    request still has something to diff against.
+    """
+    options = "".join(
+        f'<option value="{esc(key)}"{" selected" if key == t.cadence else ""}>'
+        f"{esc(label)}</option>"
+        for key, label in (("daily", "day"), ("weekly", "week"),
+                           ("monthly", "month"), ("manual", "manual only")))
+    return (f'<form class="cadence" method="post" action="/cadence">'
+            f'<input type="hidden" name="ticker" value="{esc(t.ticker)}">'
+            f'<select name="cadence" aria-label="Rescan {esc(t.ticker)} every">'
+            f"{options}</select>"
+            f'<button type="submit">set</button></form>')
+
+
+def cadence_route(form: dict[str, list[str]]) -> bytes:
+    ticker = (form.get("ticker", [""])[0] or "").strip().upper()
+    cadence = (form.get("cadence", [""])[0] or "").strip()
+    try:
+        with connect() as connection:
+            changed = set_cadence(connection, ticker, cadence)
+    except ValueError as exc:
+        return tracked_page(error=f"Not saved — {exc}")
+    if not changed:
+        return tracked_page(error=f"{ticker} is not tracked.")
+    return tracked_page(message=f"{ticker} will be rescanned {cadence}.")
+
+
 def tracked_page(message: str = "", error: str = "") -> bytes:
     """When each company was first scanned, and what has accumulated since."""
     with connect() as connection:
@@ -1958,6 +2000,7 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             f'<td class="num">{t.baseline_facts:,}</td>'
             f'<td class="num">{("+" + format(t.facts_added, ",")) if t.facts_added else "—"}</td>'
             f"<td>{delta_cell(t.ticker)}</td>"
+            f"<td>{_cadence_cell(t)}</td>"
             f'<td><form method="post" action="/untrack">'
             f'<input type="hidden" name="ticker" value="{esc(t.ticker)}">'
             f'<button class="ghost" type="submit">stop</button></form></td></tr>'
@@ -1969,39 +2012,37 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             '<th scope="col">Baseline taken</th><th scope="col">Last scan</th>'
             '<th scope="col" class="num">Scans</th><th scope="col" class="num">Baseline figures</th>'
             '<th scope="col" class="num">Added since</th><th scope="col">Since last scan</th>'
-            '<th scope="col"></th>'
+            '<th scope="col">Rescan every</th><th scope="col"></th>'
             f"</tr></thead><tbody>{body_rows}</tbody></table></div>"
         )
     else:
         table = ('<p class="reason">Nothing tracked yet. Scan a company and press '
                  "<em>Add to watchlist</em>.</p>")
 
-    daily_state = (
-        f'<span class="quiet">Daily pass on — last run {esc(DAILY["last"] or "— hasn\u2019t run yet")}.</span>'
-        if DAILY["on"] else
-        '<span class="quiet">Daily pass off — start the server with --daily to enable it.</span>'
-    )
     body = f"""<header class="masthead">
 <h1>Watchlist</h1>
 </header>
 {flash}
+{table}
 <div class="rescan">
 <form method="post" action="/rescan"><button type="submit">Rescan all</button></form>
-{daily_state}
 </div>
-{table}
 <footer class="meta-line">{_ledger_line()}</footer>"""
     return _page("Watchlist — Contour", body, current="/tracked")
 
 
-def rescan_tracked(client: EdgarClient) -> list[tuple[str, object]]:
-    """Rescan every tracked company and return what changed for each.
+def rescan_tracked(client: EdgarClient, due_only: bool = False) -> list[tuple[str, object]]:
+    """Rescan tracked companies and return what changed for each.
 
     Sequential on purpose — these hit SEC, and a burst of parallel requests is
     the fastest way to get an IP throttled mid-demo.
+
+    `due_only` is for the background pass, which respects each company's
+    cadence. Pressing Rescan all is a deliberate act and rescans everything.
     """
     with connect() as connection:
-        tickers = [t.ticker for t in tracked_companies(connection)]
+        tracked = tracked_companies(connection)
+    tickers = [t.ticker for t in tracked if t.due()] if due_only else [t.ticker for t in tracked]
     out: list[tuple[str, object]] = []
     for ticker in tickers:
         try:
@@ -2632,6 +2673,8 @@ class Handler(BaseHTTPRequestHandler):
                 payload = track_route(self.client, form)
             elif parsed.path == "/untrack":
                 payload = untrack_route(form)
+            elif parsed.path == "/cadence":
+                payload = cadence_route(form)
             elif parsed.path == "/authored/write":
                 payload = write_checks_route(self.client, form)
             elif parsed.path == "/add/review":
