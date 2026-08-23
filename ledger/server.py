@@ -44,7 +44,14 @@ from ledger.render import (
     roster_html,
 )
 from ledger.report import Report, Status, scan
-from ledger.sources import CustomSource, SourceError, append_source, load_sources
+from ledger.sources import (
+    CustomSource,
+    SourceError,
+    append_source,
+    load_sources,
+    remove_source,
+    set_source_enabled,
+)
 from ledger.summary import executive_summary
 from ledger.store import (
     connect,
@@ -755,9 +762,32 @@ border:1px solid var(--accent);cursor:pointer}
 button.ghost{background:none;color:var(--ink-3);border:1px solid var(--rule);
 font-weight:500;padding:.35rem .75rem}
 button.ghost:hover{color:var(--high);border-color:var(--high)}
-.rescan{display:flex;flex-wrap:wrap;align-items:center;gap:.9rem;padding:.9rem 1.1rem;
-border:1px solid var(--rule);background:var(--surface);font-size:.875rem;color:var(--ink-2)}
+/* One button does not need a panel around it. The frame read as a section
+   with something in it, which is exactly what invites a stray click. */
+.rescan{display:flex;flex-wrap:wrap;align-items:center;gap:.9rem;
+font-size:.875rem;color:var(--ink-2)}
 .rescan form{margin:0}
+/* -- editing is a mode you enter on purpose ---------------------------- */
+.edit-toggle{margin-left:auto;display:inline-flex;align-items:center;gap:.4rem;
+font-family:var(--mono);font-size:.6875rem;letter-spacing:.08em;
+text-transform:uppercase;padding:.28rem .6rem;background:none;color:var(--ink-3);
+border:1px solid var(--rule);cursor:pointer}
+.edit-toggle:hover{border-color:var(--accent);color:var(--accent)}
+[data-edit-region].editing .edit-toggle{border-color:var(--accent);
+background:var(--accent-soft);color:var(--accent)}
+.edit-only{display:none}
+[data-edit-region].editing .edit-only{display:inline-flex}
+[data-edit-region]:not(.editing) .locked{opacity:.62}
+.set-note{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.src-acts{display:flex;gap:.35rem;padding-top:.25rem}
+.src-acts form{margin:0}
+.src-acts button{font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;
+text-transform:uppercase;padding:.2rem .45rem;background:none;color:var(--ink-3);
+border:1px solid var(--rule);cursor:pointer}
+.src-acts button:hover{border-color:var(--accent);color:var(--accent)}
+.src-acts button.danger:hover{border-color:var(--high);color:var(--high)}
+[data-edit-region] form.cadence{display:none}
+[data-edit-region].editing form.cadence{display:flex}
 .delta{display:flex;flex-direction:column;gap:.25rem;font-size:.8125rem}
 .delta .new{color:var(--med)}
 .delta .gone{color:var(--pass)}
@@ -1169,6 +1199,33 @@ CHROME_SCRIPT = """<script>
   // Feedback is worth little without knowing which page it came from.
   document.querySelectorAll('[data-feedback-page]').forEach(function (field) {
     field.value = location.pathname + location.search;
+  });
+
+  // -- edit mode --------------------------------------------------------
+  // Hiding a control is not the same as disabling it: a hidden select is
+  // still focusable by keyboard and still submits. Both, or neither.
+  function setRegion(region, on) {
+    region.classList.toggle('editing', on);
+    region.querySelectorAll('.edit-only').forEach(function (node) {
+      node.querySelectorAll('input, select, button, textarea').forEach(function (f) {
+        f.disabled = !on;
+      });
+      if (node.matches('input, select, button, textarea')) node.disabled = !on;
+    });
+    region.querySelectorAll('.read-only').forEach(function (node) {
+      node.hidden = on;
+    });
+    var label = region.querySelector('[data-edit-label]');
+    if (label) label.textContent = on ? 'Done' : 'Edit';
+  }
+  document.querySelectorAll('[data-edit-region]').forEach(function (region) {
+    setRegion(region, false);
+  });
+  document.addEventListener('click', function (ev) {
+    var hit = ev.target.closest('[data-edit-toggle]');
+    if (!hit) return;
+    var region = hit.closest('[data-edit-region]');
+    if (region) setRegion(region, !region.classList.contains('editing'));
   });
 
   // -- the tour ---------------------------------------------------------
@@ -2013,6 +2070,21 @@ SOURCES_SCRIPT = """<script>
 })();
 </script>"""
 
+def _edit_button(what: str) -> str:
+    """Sections are read-only until someone says otherwise.
+
+    These pages are read far more often than they are changed, and a control
+    that is live while you are reading is a control you can hit by accident.
+    """
+    return (f'<button class="edit-toggle" type="button" data-edit-toggle '
+            f'aria-label="Edit {esc(what)}">'
+            f'<svg viewBox="0 0 20 20" aria-hidden="true" '
+            f'style="width:.75rem;height:.75rem;fill:none;stroke:currentColor;'
+            f'stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round">'
+            f'<path d="M13.2 3.6 16.4 6.8 7.2 16H4v-3.2z"/></svg>'
+            f'<span data-edit-label>Edit</span></button>')
+
+
 def _source_state(source: CustomSource) -> tuple[str, str, list[str]]:
     """Live, Blocked or Off — and never two of them at once.
 
@@ -2053,7 +2125,16 @@ def _source_row(source: CustomSource) -> str:
 <div class="src-keyed"><span class="keyed">{keyed}</span>
 <span class="sub">{esc(source.coverage)}</span></div>
 <div class="src-file"><span class="sub">{esc(source.path.name if source.path else "")}</span>
-<span class="sub">{esc(source.kind)}</span></div>
+<span class="sub">{esc(source.kind)}</span>
+<span class="src-acts edit-only">
+<form method="post" action="/sources/toggle">
+<input type="hidden" name="name" value="{esc(source.name)}">
+<input type="hidden" name="enabled" value="{'0' if source.enabled else '1'}">
+<button type="submit">{'turn off' if source.enabled else 'turn on'}</button></form>
+<form method="post" action="/sources/remove">
+<input type="hidden" name="name" value="{esc(source.name)}">
+<button type="submit" class="danger">remove</button></form>
+</span></div>
 </div>"""
 
 
@@ -2126,7 +2207,7 @@ def _preset_chips() -> str:
         f'<span class="preset"><b>{esc(t)}</b>{(" — " + esc(n)) if n else ""}'
         f'<form method="post" action="/presets/remove">'
         f'<input type="hidden" name="ticker" value="{esc(t)}">'
-        f'<button type="submit" title="Remove {esc(t)}" '
+        f'<button class="edit-only" type="submit" title="Remove {esc(t)}" '
         f'aria-label="Remove {esc(t)}">&times;</button></form></span>'
         for t, n in presets
     ) or '<span class="preset">none configured</span>'
@@ -2226,9 +2307,10 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 {_source_health(sources)}
 </header>
 {flash}
-<section class="check">
+<section class="check" id="sources" data-edit-region>
 <div class="check-head"><h2>Declared sources</h2>
-<span class="head-note">{len(sources)} declared · sources/*.toml</span></div>
+<span class="head-note">{len(sources)} declared · sources/*.toml</span>
+{_edit_button("declared sources")}</div>
 {_source_toolbar(sources)}
 <div class="srclist" id="srclist">{rows}</div>
 {_pager(len(sources), len(sources), "")}
@@ -2245,8 +2327,9 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 </section>
 
 <div class="srcband">
-<section class="check" id="shortcuts">
-<div class="check-head"><h2>Scan shortcuts</h2></div>
+<section class="check" id="shortcuts" data-edit-region>
+<div class="check-head"><h2>Scan shortcuts</h2>
+{_edit_button("scan shortcuts")}</div>
 <div class="presets">{_preset_chips()}</div>
 {_pager(len(presets), len(presets), "", compact=True) if presets else ""}
 <form class="inline" method="post" action="/presets/add">
@@ -2288,6 +2371,26 @@ def sources_page(message: str = "", error: str = "") -> bytes:
 </div>
 {SOURCES_SCRIPT}"""
     return _page("Sources — Contour", body, current="/sources")
+
+
+def toggle_source_route(form: dict[str, list[str]]) -> bytes:
+    name = (form.get("name", [""])[0] or "").strip()
+    want = (form.get("enabled", ["1"])[0] or "1").strip() == "1"
+    try:
+        source = set_source_enabled(name, want)
+    except (SourceError, OSError) as exc:
+        raise _back_to("sources", error=f"Not changed — {exc}")
+    state = "on" if source.enabled else "off"
+    raise _back_to("sources", message=f"{source.name} turned {state}.")
+
+
+def remove_source_route(form: dict[str, list[str]]) -> bytes:
+    name = (form.get("name", [""])[0] or "").strip()
+    try:
+        where = remove_source(name)
+    except (SourceError, OSError) as exc:
+        raise _back_to("sources", error=f"Not removed — {exc}")
+    raise _back_to("sources", message=f"Removed {name} from {where}.")
 
 
 def _parse_entities(raw: str) -> dict[str, str]:
@@ -2399,16 +2502,21 @@ def _cadence_cell(t) -> str:
     which is not the same as untracking it: the baseline stays, so a scan on
     request still has something to diff against.
     """
+    labels = {"daily": "day", "weekly": "week", "monthly": "month",
+              "manual": "manual only"}
     options = "".join(
         f'<option value="{esc(key)}"{" selected" if key == t.cadence else ""}>'
         f"{esc(label)}</option>"
-        for key, label in (("daily", "day"), ("weekly", "week"),
-                           ("monthly", "month"), ("manual", "manual only")))
-    return (f'<form class="cadence" method="post" action="/cadence">'
+        for key, label in labels.items())
+    # Read mode shows the value as text; the control only exists once the
+    # reader has said they are editing. A dropdown sitting live in a table row
+    # is one mis-click away from silently rescheduling a company.
+    return (f'<span class="locked read-only">{esc(labels.get(t.cadence, t.cadence))}</span>'
+            f'<form class="cadence edit-only" method="post" action="/cadence">'
             f'<input type="hidden" name="ticker" value="{esc(t.ticker)}">'
             f'<select name="cadence" aria-label="Rescan {esc(t.ticker)} every">'
             f"{options}</select>"
-            f'<button type="submit">set</button></form>')
+            f'<button type="submit">save</button></form>')
 
 
 def cadence_route(form: dict[str, list[str]]) -> bytes:
@@ -2567,7 +2675,7 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
             f'<td class="num">{("+" + format(t.facts_added, ",")) if t.facts_added else "—"}</td>'
             f"<td>{delta_cell(t.ticker)}</td>"
             f"<td>{_cadence_cell(t)}</td>"
-            f'<td><form method="post" action="/untrack">'
+            f'<td><form class="edit-only" method="post" action="/untrack">'
             f'<input type="hidden" name="ticker" value="{esc(t.ticker)}">'
             f'<button class="ghost" type="submit">stop</button></form></td></tr>'
             for t in rows
@@ -2589,7 +2697,11 @@ def tracked_page(message: str = "", error: str = "") -> bytes:
 <h1>Watchlist</h1>
 </header>
 {flash}
+<section class="check" data-edit-region>
+<div class="check-head"><h2>Tracked companies</h2>
+{_edit_button("cadence and tracking")}</div>
 {table}
+</section>
 <div class="rescan">
 <form method="post" action="/rescan"><button type="submit">Rescan all</button></form>
 </div>
@@ -3231,6 +3343,10 @@ class Handler(BaseHTTPRequestHandler):
             form = parse_qs(self.rfile.read(length).decode("utf-8")) if length else {}
             if parsed.path == "/sources/add":
                 payload = add_source(form)
+            elif parsed.path == "/sources/toggle":
+                payload = toggle_source_route(form)
+            elif parsed.path == "/sources/remove":
+                payload = remove_source_route(form)
             elif parsed.path == "/presets/add":
                 payload = add_preset_route(self.client, form)
             elif parsed.path == "/rescan":
