@@ -52,7 +52,7 @@ from ledger.sources import (
     remove_source,
     set_source_enabled,
 )
-from ledger.summary import executive_summary
+from ledger.agents.summary import executive_summary
 from ledger.store import (
     connect,
     coverage,
@@ -779,6 +779,51 @@ background:var(--accent-soft);color:var(--accent)}
 [data-edit-region].editing .edit-only{display:inline-flex}
 [data-edit-region]:not(.editing) .locked{opacity:.62}
 .set-note{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+/* -- analyst brief ------------------------------------------------------ */
+.analyst{display:flex;flex-direction:column;gap:1rem;padding:1.35rem 1.5rem;
+background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent)}
+.analyst-head{display:flex;flex-direction:column;gap:.2rem}
+.analyst-head h2{font-family:var(--sans);font-size:1.1875rem;font-weight:600;margin:0}
+.analyst .who{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.analyst-headline{margin:0;font-size:1.0625rem;line-height:1.5;color:var(--ink)}
+.thread{display:flex;flex-direction:column;gap:.55rem;padding-top:.9rem;
+border-top:1px solid var(--rule)}
+.thread h3{font-family:var(--sans);font-size:.9375rem;font-weight:600;margin:0}
+.thread .reading{margin:0;font-size:.9375rem;line-height:1.55;color:var(--ink-2)}
+.sides{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:1px;
+background:var(--rule);border:1px solid var(--rule)}
+.side{background:var(--paper);padding:.7rem .85rem;display:flex;flex-direction:column;gap:.35rem}
+.side-label{font-family:var(--mono);font-size:.625rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+.side.for .side-label{color:var(--pass)}
+.side.against .side-label{color:var(--med)}
+.side ul{margin:0;padding-left:1.05rem;font-size:.8125rem;line-height:1.5;color:var(--ink-2)}
+.side li{margin-bottom:.3rem}
+.side .none{margin:0;font-family:var(--mono);font-size:.75rem;color:var(--ink-3)}
+.thread-cites{display:flex;flex-wrap:wrap;gap:.4rem}
+.thread-cites a{display:inline-flex;align-items:center;gap:.4rem;font-family:var(--mono);
+font-size:.6875rem;text-decoration:none;border:1px solid var(--rule);
+padding:.2rem .5rem;color:var(--ink-3)}
+.thread-cites a:hover{border-color:var(--accent);color:var(--accent)}
+.thread-cites b{font-weight:600;color:var(--accent)}
+.corrob{margin:0;font-size:.875rem;line-height:1.55;color:var(--ink-2);
+padding-top:.9rem;border-top:1px solid var(--rule)}
+.gaps{display:flex;flex-direction:column;gap:.3rem;padding-top:.9rem;
+border-top:1px solid var(--rule)}
+.gaps ul{margin:0;padding-left:1.05rem;font-size:.8125rem;line-height:1.5;color:var(--ink-3)}
+.digest{display:flex;flex-direction:column;gap:.75rem;padding:1.2rem 1.35rem;
+background:var(--surface);border:1px solid var(--rule);border-left:3px solid var(--accent)}
+.digest-head{display:flex;align-items:baseline;gap:.75rem}
+.digest-head h2{font-family:var(--sans);font-size:1.0625rem;font-weight:600;margin:0}
+.digest-head .who{margin-left:auto;font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.digest-headline{margin:0;font-size:.9375rem;line-height:1.55}
+.digest-lines{display:flex;flex-direction:column;gap:1px;background:var(--rule);
+border:1px solid var(--rule)}
+.digest-line{display:grid;grid-template-columns:4.5rem minmax(0,1fr);gap:.9rem;
+background:var(--paper);padding:.55rem .8rem;align-items:baseline}
+.digest-line a{font-family:var(--mono);font-size:.8125rem;font-weight:600;
+color:var(--accent);text-decoration:none}
+.digest-line span{font-size:.8125rem;line-height:1.5;color:var(--ink-2)}
 .src-acts{display:flex;gap:.35rem;padding-top:.25rem}
 .src-acts form{margin:0}
 .src-acts button{font-family:var(--mono);font-size:.625rem;letter-spacing:.06em;
@@ -1533,6 +1578,37 @@ def _activity(connection) -> str:
     return "".join(out)
 
 
+def _digest_html() -> str:
+    """The daily read across the watchlist.
+
+    Absent rather than empty: a digest that has not been written yet prints
+    nothing, because a placeholder promising one is worse than the silence.
+    """
+    try:
+        from ledger.agents.brief import load_digest
+        digest = load_digest()
+    except Exception:  # noqa: BLE001
+        return ""
+    if not digest or not digest.get("headline"):
+        return ""
+    lines = "".join(
+        f'<div class="digest-line"><a href="/scan?a={esc(str(row.get("ticker", "")))}">'
+        f'{esc(str(row.get("ticker", "")))}</a>'
+        f'<span>{esc(str(row.get("note", "")))}</span></div>'
+        for row in (digest.get("lines") or []) if row.get("ticker"))
+    gaps = "".join(f"<li>{esc(str(g))}</li>" for g in (digest.get("gaps") or []))
+    written = digest.get("written", "")
+    model = digest.get("model", "a language model")
+    sim = " · standing in for the API call" if digest.get("provenance") == "simulated" else ""
+    return (f'<section class="digest"><div class="digest-head"><h2>Daily brief</h2>'
+            f'<span class="who">{esc(str(model))}'
+            f'{f" · {esc(str(written))}" if written else ""}{sim}</span></div>'
+            f'<p class="digest-headline">{esc(str(digest["headline"]))}</p>'
+            f'<div class="digest-lines">{lines}</div>'
+            f'{f"<div class=\"gaps\"><span class=\"side-label\">Not checked</span><ul>{gaps}</ul></div>" if gaps else ""}'
+            f"</section>")
+
+
 def landing() -> bytes:
     stats, watchlist, activity = {}, "", ""
     try:
@@ -1547,6 +1623,7 @@ def landing() -> bytes:
 <div class="ov-main">
 <header class="masthead"><h1>Overview</h1>{_form()}</header>
 {_suggestions()}
+{_digest_html()}
 <section class="panel"><div class="panel-head"><h2>Watchlist</h2>
 <a href="/tracked">Manage &rarr;</a></div>{watchlist}</section>
 </div>
@@ -1665,6 +1742,54 @@ def _brief(report: Report):
         return executive_summary(report)
     except Exception:  # noqa: BLE001
         return None
+
+
+def _analyst(report: Report):
+    try:
+        from ledger.agents.brief import analyst_brief
+        return analyst_brief(report)
+    except Exception:  # noqa: BLE001 — the report stands without it
+        return None
+
+
+def _brief_html(brief) -> str:
+    """Two columns per thread: what supports the reported picture, and what
+    cuts against it. Splitting them is the whole point — a list that mixes
+    them lets a reader take whichever half they arrived wanting."""
+    if brief is None or not brief.available or not brief.headline:
+        return ""
+    threads = ""
+    for thread in brief.threads:
+        def side(items, label, tone):
+            if not items:
+                return (f'<div class="side {tone}"><span class="side-label">{label}</span>'
+                        f'<p class="none">Nothing in the material.</p></div>')
+            rows = "".join(f"<li>{esc(str(i))}</li>" for i in items)
+            return (f'<div class="side {tone}"><span class="side-label">{label}</span>'
+                    f"<ul>{rows}</ul></div>")
+        cites = "".join(
+            f'<a href="{esc(str(c.get("url", "")))}" target="_blank" rel="noopener noreferrer">'
+            f'<b>{esc(str(c.get("klass", "?")))}</b>{esc(str(c.get("label", "source")))}</a>'
+            for c in (thread.get("sources") or []) if c.get("url"))
+        threads += (
+            f'<article class="thread"><h3>{esc(str(thread.get("title", "")))}</h3>'
+            f'<p class="reading">{esc(str(thread.get("reading", "")))}</p>'
+            f'<div class="sides">{side(thread.get("supporting"), "Supports the reported picture", "for")}'
+            f'{side(thread.get("against"), "Cuts against it", "against")}</div>'
+            f'{f"<div class=\"thread-cites\">{cites}</div>" if cites else ""}</article>')
+    gaps = "".join(f"<li>{esc(str(g))}</li>" for g in brief.not_checked)
+    stamp = (f"Cached · written {esc(brief.written or 'unknown')}"
+             if brief.cached else f"Written {esc(brief.written or 'now')}")
+    sim = (' · standing in for the API call'
+           if (brief.provenance or "") == "simulated" else "")
+    return (f'<section class="analyst"><div class="analyst-head"><h2>Analyst brief</h2>'
+            f'<span class="who">{esc(brief.model or "a language model")} · {stamp}{sim}'
+            f" · reads the findings below, adds no figures of its own</span></div>"
+            f'<p class="analyst-headline">{esc(brief.headline)}</p>'
+            f"{threads}"
+            f'{f"<p class=\"corrob\">{esc(brief.corroboration)}</p>" if brief.corroboration else ""}'
+            f'{f"<div class=\"gaps\"><span class=\"side-label\">Not checked</span><ul>{gaps}</ul></div>" if gaps else ""}'
+            f"</section>")
 
 
 SEV_RANK = {"high": 0, "medium": 1, "low": 2, "info": 3}
@@ -1907,6 +2032,7 @@ def _column(report: Report, elapsed: float, solo: bool = True) -> str:
 <span class="meta">{esc(report.ticker)} · CIK {report.cik} · {esc(filed)}</span></div>
 {_verdict(report, elapsed)}
 {summary_html(_brief(report))}
+{_brief_html(_analyst(report))}
 {visuals_html(report)}
 {gap_block if gaps_first else ""}
 {body}
@@ -2761,7 +2887,7 @@ def _unmapped_sources(ticker: str) -> list:
 
 def propose_entities_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
     """Ask the model what this company is called in each unmapped source."""
-    from ledger.authored import resolve_entities
+    from ledger.agents.entities import resolve_entities
     from ledger.config import propose_entity
     from datetime import date as _date
 
@@ -2834,7 +2960,9 @@ def write_checks_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes
         return results(client, [ticker],
                        notice=f"Could not write checks — EDGAR unreachable ({type(exc).__name__})")
 
-    written = A.write_checks(ticker, company.name, profile, facts)
+    from ledger.agents.checks import write_checks
+
+    written = write_checks(ticker, company.name, profile, facts)
     if not written.specs:
         detail = "; ".join(written.rejected[:3])
         return results(client, [ticker], notice=(
@@ -3121,7 +3249,8 @@ def add_page(error: str = "") -> bytes:
 def add_review_route(client: EdgarClient, form: dict[str, list[str]]) -> bytes:
     """Step 2 — what applies, what is recommended, and what was ruled out."""
     from ledger.authored import available_concepts
-    from ledger.catalogue import applicable, recommend
+    from ledger.agents.roster import recommend
+    from ledger.catalogue import applicable
 
     ticker = (form.get("ticker", [""])[0] or "").strip().upper()
     if not ticker:
