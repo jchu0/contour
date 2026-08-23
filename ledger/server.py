@@ -584,6 +584,69 @@ text-transform:uppercase;padding:.25rem .45rem;background:none;color:var(--ink-3
 border:1px solid var(--rule);cursor:pointer}
 form.cadence button:hover{border-color:var(--accent);color:var(--accent)}
 .count-line{margin:0;font-family:var(--mono);font-size:.75rem;color:var(--ink-3)}
+/* -- top bar, help, tour, settings ------------------------------------- */
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:.9rem;
+padding:.55rem 1.5rem;background:var(--paper);border-bottom:1px solid var(--rule)}
+.bar-button{display:inline-flex;align-items:center;gap:.4rem;height:2rem;
+padding:0 .65rem;font-family:var(--mono);font-size:.75rem;background:none;
+color:var(--ink-2);border:1px solid var(--rule);cursor:pointer}
+.bar-button:hover{border-color:var(--accent);color:var(--accent)}
+.bar-button svg{width:.875rem;height:.875rem;fill:none;stroke:currentColor;
+stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.crumbs-bar{display:flex;align-items:baseline;gap:.45rem;font-family:var(--mono);
+font-size:.75rem;color:var(--ink-3);min-width:0}
+.crumbs-bar b{color:var(--ink);font-weight:600}
+.crumb-sep{color:var(--rule-strong)}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:.5rem}
+.ico-moon{display:none}
+:root[data-theme="dark"] .ico-sun{display:none}
+:root[data-theme="dark"] .ico-moon{display:inline-block}
+.brand-row{display:flex;align-items:center;gap:.5rem}
+.brand-row .brand{flex:1 1 auto;min-width:0}
+.brand-row .nav-toggle{width:auto;flex:none;padding:.35rem}
+.brand-row .nav-toggle .nav-label{display:none}
+a.account{text-decoration:none;color:inherit}
+a.account:hover{background:var(--surface-2)}
+.help{position:fixed;right:1.5rem;bottom:1.5rem;z-index:60;display:flex;
+flex-direction:column;align-items:flex-end;gap:.6rem}
+.help-button{display:grid;place-items:center;width:3rem;height:3rem;border-radius:50%;
+background:var(--accent);color:var(--paper);border:0;cursor:pointer;
+box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.help-button svg{width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;
+stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.help-panel{width:21rem;max-width:calc(100vw - 3rem);max-height:60vh;overflow:auto;
+background:var(--surface);border:1px solid var(--rule);padding:1rem 1.1rem;
+box-shadow:0 12px 32px rgba(0,0,0,.24)}
+.help-head{display:flex;align-items:center;margin-bottom:.5rem}
+.help-head b{font-family:var(--sans);font-size:.9375rem}
+.help-close{margin-left:auto;background:none;border:0;color:var(--ink-3);
+font-size:1.1rem;line-height:1;cursor:pointer;padding:0 .2rem}
+.help-panel p{margin:0 0 .6rem;font-size:.8125rem;color:var(--ink-2);line-height:1.5}
+.help-panel ul{margin:0 0 .6rem;padding-left:1.05rem;font-size:.8125rem;
+color:var(--ink-2);line-height:1.5}
+.help-panel li{margin-bottom:.35rem}
+.help-foot{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3)}
+.tour-ring{position:absolute;z-index:70;pointer-events:none;
+border:2px solid var(--accent);box-shadow:0 0 0 9999px rgba(4,8,14,.55)}
+.tour-box{position:absolute;z-index:71;width:20rem;max-width:calc(100vw - 2rem);
+background:var(--surface);border:1px solid var(--rule-strong);padding:.9rem 1rem;
+box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.tour-title{font-family:var(--sans);font-size:.9375rem;font-weight:600;display:block}
+.tour-text{margin:.35rem 0 .75rem;font-size:.8125rem;color:var(--ink-2);line-height:1.5}
+.tour-foot{display:flex;align-items:center;gap:.5rem}
+.tour-count{font-family:var(--mono);font-size:.6875rem;color:var(--ink-3);
+margin-right:auto}
+.tour-skip,.tour-next{font-family:var(--mono);font-size:.75rem;padding:.35rem .7rem;
+border:1px solid var(--rule);background:none;color:var(--ink-2);cursor:pointer}
+.tour-next{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));
+gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.setting{background:var(--surface);padding:1rem 1.15rem;display:flex;
+flex-direction:column;gap:.3rem}
+.setting span{font-family:var(--mono);font-size:.6875rem;letter-spacing:.1em;
+text-transform:uppercase;color:var(--ink-3)}
+.setting b{font-family:var(--mono);font-size:.875rem;font-weight:500;word-break:break-all}
+
 .pg-arrows{display:flex;gap:.4rem}
 .pg-arrow{display:grid;place-items:center;width:2.125rem;height:2.125rem;
 border:1px solid var(--rule);background:var(--surface)}
@@ -761,11 +824,13 @@ def _sidebar(current: str = "") -> str:
               f'<path d="{CHEVRON_R}"/></svg>'
               f'<span class="nav-label">Collapse</span></button>')
 
-    return (f'<aside class="sidebar"><a class="brand" href="/">'
-            f'<span class="brand-mark">CT</span>'
-            f'<span class="brand-name nav-label">Contour</span></a>'
+    # The toggle sits with the brand rather than at the foot: it acts on the
+    # rail, and the reader looks for it where the rail begins.
+    return (f'<aside class="sidebar"><div class="brand-row">'
+            f'<a class="brand" href="/"><span class="brand-mark">CT</span>'
+            f'<span class="brand-name nav-label">Contour</span></a>{toggle}</div>'
             f'<nav class="nav-list">{"".join(blocks)}</nav>'
-            f'<div class="sidebar-foot">{toggle}{_account()}</div></aside>')
+            f'<div class="sidebar-foot">{_account()}</div></aside>')
 
 
 def _account() -> str:
@@ -778,11 +843,236 @@ def _account() -> str:
     name = os.environ.get("CONTOUR_USER_NAME", "").strip() or "Account"
     detail = os.environ.get("CONTOUR_USER_EMAIL", "").strip() or "Local workspace"
     initials = "".join(part[0] for part in name.split()[:2] if part).upper() or "A"
-    return (f'<div class="account"><span class="avatar" aria-hidden="true">'
+    return (f'<a class="account" href="/settings"><span class="avatar" aria-hidden="true">'
             f"{esc(initials)}</span>"
             f'<span class="account-text"><b>{esc(name)}</b>'
-            f"<small>{esc(detail)}</small></span></div>")
+            f"<small>{esc(detail)}</small></span></a>")
 
+
+
+# What each page's tour walks through. A step is (selector, heading, body); a
+# selector that matches nothing is skipped rather than shown against an empty
+# box, so a page that renders an empty state does not tour its missing parts.
+TOURS: dict[str, list[tuple[str, str, str]]] = {
+    "/": [
+        (".factbar", "The ledger so far",
+         "Every figure Contour has read from a filing, and how many companies "
+         "and periods they cover."),
+        (".nav-list", "Two kinds of page",
+         "Analyse reads companies. Manage decides what gets read and from where."),
+    ],
+    "/scan": [
+        ("form.scan", "One company",
+         "Any of the ~10,400 SEC-registered tickers. Every figure on the report "
+         "is computed from a filing fetched now and cites the accession."),
+        (".wl", "Your watchlist",
+         "Companies with a baseline. Scanning one of these diffs against it; "
+         "scanning anything else is a first reading with nothing to compare."),
+    ],
+    "/compare": [
+        (".picker", "Two sides",
+         "Pick a company on each side. Whichever you pick is disabled on the "
+         "other — a company compared with itself is a comparison of nothing."),
+        (".commit", "What you will get",
+         "One row per check, over the union of both rosters, so a check that "
+         "ran on one side and not the other reads across in a glance."),
+    ],
+    "/tracked": [
+        (".maptable", "What has accumulated",
+         "When each baseline was taken, and what the ledger has picked up since."),
+        ("form.cadence", "How often to revisit",
+         "The background pass skips companies that are not due. Manual only "
+         "keeps the baseline without ever revisiting it on a timer."),
+    ],
+    "/sources": [
+        (".health", "What can actually run",
+         "Live, blocked and off are different states. A source switched off is "
+         "a choice; one missing its key is a gap."),
+        (".src-tools", "Finding one",
+         "Filter by name, host or file, or narrow to a state or a class."),
+        ("#mappings", "Names, typed by hand",
+         "Sources not keyed on CIK need to be told how a company is named in "
+         "them. A company with no line here reports as not applicable."),
+    ],
+    "/add": [
+        (".picks", "The roster is yours",
+         "Contour filters to what can run, then ranks. Nothing is saved until "
+         "you confirm, and anything ruled out says why."),
+    ],
+}
+
+
+def _tour(current: str) -> str:
+    steps = TOURS.get(current) or []
+    if not steps:
+        return ""
+    payload = "".join(
+        f'<template data-tour-step data-target="{esc(sel)}" '
+        f'data-title="{esc(title)}">{esc(text)}</template>'
+        for sel, title, text in steps)
+    return (f'<button class="bar-button" type="button" data-tour-start>'
+            f'<svg viewBox="0 0 20 20" aria-hidden="true">'
+            f'<circle cx="10" cy="10" r="7"/><path d="M10 9v4.5M10 6.6v.1"/></svg>'
+            f'Tour this page</button>{payload}')
+
+
+def _topbar(current: str, title: str) -> str:
+    """Where you are, how to get back, and the controls that follow you around."""
+    name = next((n for href, n, _, _ in NAV_ITEMS if href == current), "")
+    group = next((g for href, _, _, g in NAV_ITEMS if href == current), "")
+    crumbs = (f'<span class="crumb-group">{esc(group)}</span>'
+              f'<span class="crumb-sep">/</span><b>{esc(name)}</b>'
+              if name else f"<b>{esc(title)}</b>")
+    return f"""<div class="topbar">
+<button class="bar-button back" type="button" data-back
+        aria-label="Back to the previous page">
+<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4 6 10l6 6"/></svg>Back</button>
+<div class="crumbs-bar">{crumbs}</div>
+<div class="bar-right">{_tour(current)}
+<button class="bar-button theme" type="button" data-theme-toggle
+        aria-label="Switch between light and dark">
+<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-sun"><circle cx="10" cy="10" r="3.6"/>
+<path d="M10 2.4v1.8M10 15.8v1.8M2.4 10h1.8M15.8 10h1.8M4.6 4.6l1.3 1.3M14.1 14.1l1.3 1.3M15.4 4.6l-1.3 1.3M5.9 14.1l-1.3 1.3"/></svg>
+<svg viewBox="0 0 20 20" aria-hidden="true" class="ico-moon">
+<path d="M16 11.7A6.4 6.4 0 0 1 8.3 4a6.6 6.6 0 1 0 7.7 7.7"/></svg>
+<span data-theme-label>System</span></button></div>
+</div>"""
+
+
+HELP_BUBBLE = """<div class="help">
+<div class="help-panel" id="help-panel" hidden>
+<div class="help-head"><b>Help</b>
+<button type="button" class="help-close" data-help-close aria-label="Close help">&times;</button></div>
+<p>Contour reads primary filings and reports what moved between two of them.
+Nothing on a page is a model's opinion: every figure cites the accession it
+came from.</p>
+<ul>
+<li><b>Tour this page</b> in the bar above walks through what you are looking at.</li>
+<li>A check can be <b>clean</b>, <b>not applicable</b>, or <b>unavailable</b>.
+Those are three different answers and never share a treatment.</li>
+<li><b>VERIFIED</b> means a Class-A primary source matched the company by CIK.
+Anything else reads <b>REPORTED</b>.</li>
+</ul>
+<p class="help-foot">This panel is written into the page — there is nobody on
+the other end of it.</p>
+</div>
+<button class="help-button" type="button" data-help-toggle aria-expanded="false"
+        aria-controls="help-panel" aria-label="Open help">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-5 4z"/>
+<path d="M9.6 8.4a2.4 2.4 0 1 1 2.9 2.4v1.1M12.4 13.9v.1"/></svg>
+</button></div>"""
+
+
+CHROME_SCRIPT = """<script>
+(function () {
+  var root = document.documentElement;
+  // -- theme: system, then light, then dark. System is a real state, not the
+  // absence of one, so it is stamped and labelled like the other two.
+  var order = ['system', 'light', 'dark'];
+  function readTheme() {
+    try { return localStorage.getItem('contour-theme') || 'system'; } catch (e) { return 'system'; }
+  }
+  function paintTheme(mode) {
+    if (mode === 'system') { delete root.dataset.theme; }
+    else { root.dataset.theme = mode; }
+    document.querySelectorAll('[data-theme-label]').forEach(function (el) {
+      el.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+    });
+    root.dataset.themeChoice = mode;
+  }
+  paintTheme(readTheme());
+  document.addEventListener('click', function (ev) {
+    if (ev.target.closest('[data-theme-toggle]')) {
+      var next = order[(order.indexOf(readTheme()) + 1) % order.length];
+      try { localStorage.setItem('contour-theme', next); } catch (e) {}
+      paintTheme(next);
+      return;
+    }
+    if (ev.target.closest('[data-back]')) {
+      // No history to go back to on a fresh tab: fall back to Overview rather
+      // than leaving a control that does nothing.
+      if (history.length > 1) { history.back(); } else { location.href = '/'; }
+      return;
+    }
+    var helpHit = ev.target.closest('[data-help-toggle]');
+    if (helpHit) {
+      var panel = document.getElementById('help-panel');
+      var open = panel.hasAttribute('hidden');
+      if (open) { panel.removeAttribute('hidden'); } else { panel.setAttribute('hidden', ''); }
+      helpHit.setAttribute('aria-expanded', open ? 'true' : 'false');
+      return;
+    }
+    if (ev.target.closest('[data-help-close]')) {
+      document.getElementById('help-panel').setAttribute('hidden', '');
+      var btn = document.querySelector('[data-help-toggle]');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    if (ev.target.closest('[data-tour-start]')) { startTour(); }
+  });
+
+  // -- the tour ---------------------------------------------------------
+  var steps = [], at = -1, box = null, ring = null;
+  function collect() {
+    steps = [];
+    document.querySelectorAll('[data-tour-step]').forEach(function (t) {
+      var node = document.querySelector(t.getAttribute('data-target'));
+      // A <template>'s children live in .content, so textContent on the tag
+      // itself is always empty — that shipped once as a tour with no prose.
+      var text = t.content ? t.content.textContent : t.textContent;
+      if (node) steps.push({node: node, title: t.getAttribute('data-title'), text: text});
+    });
+  }
+  function frame() {
+    if (box) return;
+    ring = document.createElement('div');
+    ring.className = 'tour-ring';
+    box = document.createElement('div');
+    box.className = 'tour-box';
+    box.innerHTML = '<b class="tour-title"></b><p class="tour-text"></p>' +
+      '<div class="tour-foot"><span class="tour-count"></span>' +
+      '<button type="button" class="tour-skip">Close</button>' +
+      '<button type="button" class="tour-next">Next</button></div>';
+    document.body.append(ring, box);
+    box.querySelector('.tour-skip').addEventListener('click', stop);
+    box.querySelector('.tour-next').addEventListener('click', function () { show(at + 1); });
+  }
+  function show(i) {
+    if (i >= steps.length) { stop(); return; }
+    at = i;
+    var step = steps[i];
+    step.node.scrollIntoView({block: 'center', behavior: 'smooth'});
+    var r = step.node.getBoundingClientRect();
+    ring.style.top = (r.top + window.scrollY - 6) + 'px';
+    ring.style.left = (r.left + window.scrollX - 6) + 'px';
+    ring.style.width = (r.width + 12) + 'px';
+    ring.style.height = (r.height + 12) + 'px';
+    box.querySelector('.tour-title').textContent = step.title;
+    box.querySelector('.tour-text').textContent = step.text;
+    box.querySelector('.tour-count').textContent = (i + 1) + ' of ' + steps.length;
+    box.querySelector('.tour-next').textContent = i === steps.length - 1 ? 'Done' : 'Next';
+    var top = r.bottom + window.scrollY + 14;
+    box.style.top = top + 'px';
+    box.style.left = Math.max(16, Math.min(r.left + window.scrollX,
+      window.innerWidth - 340)) + 'px';
+    ring.hidden = false; box.hidden = false;
+  }
+  function stop() {
+    if (ring) ring.hidden = true;
+    if (box) box.hidden = true;
+    at = -1;
+  }
+  function startTour() {
+    collect();
+    if (!steps.length) return;
+    frame();
+    show(0);
+  }
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') stop();
+  });
+})();
+</script>"""
 
 NAV_SCRIPT = """<script>
 (function () {
@@ -810,8 +1100,9 @@ def _page(title: str, body: str, current: str = "") -> bytes:
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{esc(title)}</title>{FONTS}
 <style>{CSS}{_EXTRA_CSS}</style></head><body>
-<div class="app">{_sidebar(current)}<main class="main"><div class="shell">{body}</div></main></div>
-{_VEIL}{NAV_SCRIPT}</body></html>""".encode()
+<div class="app">{_sidebar(current)}<main class="main">{_topbar(current, title.split(" — ")[0])}
+<div class="shell">{body}</div></main></div>
+{HELP_BUBBLE}{_VEIL}{NAV_SCRIPT}{CHROME_SCRIPT}</body></html>""".encode()
 
 
 def _form(primary: str = "") -> str:
@@ -1967,6 +2258,44 @@ def cadence_route(form: dict[str, list[str]]) -> bytes:
     return tracked_page(message=f"{ticker} will be rescanned {cadence}.")
 
 
+def settings_page() -> bytes:
+    """What this workspace is and where it keeps things.
+
+    Read-only on purpose. Everything here is set by the environment or by the
+    command that started the server, and a control that looks editable but
+    writes nowhere is worse than a stated fact.
+    """
+    from ledger import profile as _profile
+    name = os.environ.get("CONTOUR_USER_NAME", "").strip() or "Account"
+    email = os.environ.get("CONTOUR_USER_EMAIL", "").strip() or "not set"
+    agent = os.environ.get("SEC_USER_AGENT", "").strip() or "not set — EDGAR will refuse"
+    key = "set" if os.environ.get("ANTHROPIC_API_KEY", "").strip() else "not set"
+    facts = [
+        ("Name", name, "CONTOUR_USER_NAME"),
+        ("Email", email, "CONTOUR_USER_EMAIL"),
+        ("Profile", _profile.label(), "CONTOUR_PROFILE"),
+        ("Data", str(_profile.data_dir()), ""),
+        ("Config", str(_profile.config_dir()), ""),
+        ("SEC contact", agent, "SEC_USER_AGENT"),
+        ("Model key", key, "ANTHROPIC_API_KEY"),
+        ("Daily pass", "on" if DAILY["on"] else "off", "--daily"),
+    ]
+    cards = ""
+    for label, value, source in facts:
+        note = f'<small class="note">{esc(source)}</small>' if source else ""
+        cards += (f'<div class="setting"><span>{esc(label)}</span>'
+                  f"<b>{esc(value)}</b>{note}</div>")
+    body = f"""<header class="masthead"><h1>Settings</h1></header>
+<section class="check"><div class="check-head"><h2>Workspace</h2></div>
+<div class="settings-grid">{cards}</div>
+</section>
+<section class="check"><div class="check-head"><h2>Appearance</h2></div>
+<p class="count-line">Theme follows the control in the bar above: system, light
+or dark. The choice is kept in this browser.</p>
+</section>"""
+    return _page("Settings — Contour", body, current="/settings")
+
+
 def tracked_page(message: str = "", error: str = "") -> bytes:
     """When each company was first scanned, and what has accumulated since."""
     with connect() as connection:
@@ -2613,6 +2942,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/tracked":
                 payload = tracked_page()
+            elif parsed.path == "/settings":
+                payload = settings_page()
             elif parsed.path == "/sources":
                 query = parse_qs(parsed.query)
                 payload = sources_page(message=(query.get("ok", [""])[0]),
