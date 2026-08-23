@@ -60,6 +60,9 @@ _METRICS = {
 # test across a split compares incomparable numbers. Apple's 2012 EPS of $9.32
 # predates a 7:1 and a 4:1 split; testing today's EPS against it would call a
 # true statement false.
+# A record claim's own figure may round; beyond this it is a different number.
+_RECORD_FIGURE_TOLERANCE = 0.02
+
 _SPLIT_SENSITIVE = ("eps",)
 
 # Forward-looking guidance is not a report of what happened; there is nothing
@@ -499,6 +502,28 @@ def substantiate(claim: Claim, history: dict[str, list[tuple[str, float]]]) -> S
             claim, Verdict.NOT_TESTABLE,
             f"A record test on {metric} is unsafe: per-share figures are stored as filed and are "
             "not adjusted for stock splits, so historical values are not comparable.")
+
+    # A record claim that also states a figure has to state the right one. This
+    # path used to test the superlative alone, so a release reading "a record
+    # $75.2 billion" was scored against the $81.61B actually filed and came back
+    # QUALIFIED — the check confirmed a record while the number in the sentence
+    # disagreed with the filing by billions, unremarked. As with the numeric
+    # path, a gap is reported and never called false: it may be a segment, an
+    # adjusted measure, or our own parsing.
+    if len(_MONEY.findall(claim.text)) == 1:
+        stated = _stated_value(claim.text)
+        if stated is not None and current_value:
+            gap = abs(stated - current_value) / current_value
+            if gap > _RECORD_FIGURE_TOLERANCE:
+                return Substantiation(
+                    claim, Verdict.NOT_TESTABLE,
+                    f"The release states {_fmt(stated)} where {current_label} reports "
+                    f"{_fmt(current_value)}, a {gap:.0%} gap. The record cannot be tested "
+                    "against a figure the release does not state — most often a segment, "
+                    "an adjusted measure, or a different period.",
+                    {"stated in release": _fmt(stated),
+                     "reported to SEC": f"{current_label} = {_fmt(current_value)}",
+                     "difference": f"{gap:.1%}"})
 
     best_label, best_value = max(prior, key=lambda p: p[1])
     figures = {

@@ -61,10 +61,12 @@ is not there, write around it.
 3. NEVER assert wrongdoing or intent. "Revenue fell while credits fell faster" \
 is a fact. "Tesla propped up revenue with credits" is an accusation. Write the \
 first.
-4. Class A material is primary and authoritative. Class B through F is \
-CORROBORATION ONLY — it can agree or disagree with a filing, never establish a \
-fact on its own. When you use it, say what class it is and treat it as a \
-signal, not a finding. A community post is the weakest thing on the page.
+4. Weigh material by its class, which is stated on every line. Class A and B \
+are primary: a regulator's notice or a company's own release is authoritative \
+for what it states on its face, though only a figure computed from a filing is \
+a finding. Class C through F is CORROBORATION ONLY — it can agree or disagree \
+with a filing, never establish a fact on its own. Say which class you are \
+leaning on. A community post is the weakest thing on the page.
 5. Say what could not be checked. A reader who is not told about a gap will \
 assume there was none. A check that DOES NOT APPLY is not a gap.
 6. Attribute every claim to the check or source it came from, so a reader can \
@@ -165,24 +167,40 @@ def brief_input(report: Report) -> str:
         for note in check.notes:
             lines.append(f"  note: {note}")
 
-    lines += ["", "=== CORROBORATION ONLY (CLASS B-F — cannot establish a fact) ==="]
-    any_feed = False
+    # Declared sources are grouped by what they actually are, not by the fact
+    # that they were declared. The Federal Register is a regulator: printing it
+    # under a "CLASS B-F, corroboration only" header contradicted its own class
+    # tag on the very next line, and the reader had to pick which to believe.
+    primary, corroborating = [], []
     for check in report.checks:
         if not check.key.startswith("custom_") or not check.items:
             continue
-        any_feed = True
-        lines.append(f"[{check.title}]")
         for item in check.items:
             source = item.source
             klass = source.klass.letter if source else "?"
+            (primary if klass in ("A", "B") else corroborating).append(
+                (check.title, klass, source, item))
+
+    def render(rows: list) -> list[str]:
+        out, seen = [], None
+        for title, klass, source, item in rows:
+            if title != seen:
+                out.append(f"[{title}]")
+                seen = title
             when = source.document_date if source else "?"
-            url = source.url if source else ""
-            lines.append(f"  - (class {klass}, {when}) {item.headline}")
+            out.append(f"  - (class {klass}, {when}) {item.headline}")
             if item.detail:
-                lines.append(f"    {item.detail[:200]}")
-            if url:
-                lines.append(f"    {url}")
-    if not any_feed:
+                out.append(f"    {item.detail[:200]}")
+            if source and source.url:
+                out.append(f"    {source.url}")
+        return out
+
+    lines += ["", "=== DECLARED SOURCES, PRIMARY (CLASS A-B — authoritative on "
+              "what they state, but not computed from a filing) ==="]
+    lines += render(primary) or ["(none)"]
+    lines += ["", "=== CORROBORATION ONLY (CLASS C-F — cannot establish a fact) ==="]
+    lines += render(corroborating) or ["(none)"]
+    if not primary and not corroborating:
         lines.append("(no declared source returned anything for this company)")
     return "\n".join(lines)
 
